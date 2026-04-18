@@ -1,14 +1,18 @@
 package com.example.clientforwebstorage.ui
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -16,26 +20,45 @@ import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import com.example.clientforwebstorage.network.RetrofitClient
-import com.example.clientforwebstorage.network.TokenManager
 import com.example.clientforwebstorage.network.models.ApiResponse
+import com.example.clientforwebstorage.network.models.CompletedPart
+import com.example.clientforwebstorage.network.models.CreateFolderRequest
 import com.example.clientforwebstorage.network.models.Resource
 import com.example.clientforwebstorage.network.models.ResourceListData
+import com.example.clientforwebstorage.network.models.UploadCompleteRequest
+import com.example.clientforwebstorage.network.models.UploadInitData
+import com.example.clientforwebstorage.network.models.UploadInitRequest
+import com.example.clientforwebstorage.network.models.UploadPartData
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.Callback
 
 class ResourceScreen(
     private val activity: Activity,
-    private val onLogout: () -> Unit
+    private val requestPickFiles: () -> Unit
 ) {
 
     private var currentParentId: String? = null
-    private val pathStack = mutableListOf<String?>()
+    private data class PathEntry(val parentId: String?, val name: String)
+    private val pathStack = mutableListOf<PathEntry>()
+    private var currentResources: List<Resource> = emptyList()
     private lateinit var contentContainer: LinearLayout
     private lateinit var pathText: TextView
     private lateinit var emptyView: TextView
+    private lateinit var fab: TextView
+    private lateinit var overlay: View
+    private lateinit var bottomSheet: LinearLayout
+
+    private var uploadCancelled = false
+    private var currentUploadId: String? = null
+    private var uploadDialog: AlertDialog? = null
+    private var uploadProgressBar: ProgressBar? = null
+    private var uploadStatusText: TextView? = null
+    private var pendingUploadUris: List<Uri> = emptyList()
 
     fun createView(): View {
         val rootLayout = ConstraintLayout(activity).apply {
@@ -64,27 +87,9 @@ class ResourceScreen(
             textSize = 20f
             setTextColor(Color.parseColor("#333333"))
             setTypeface(null, android.graphics.Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        }
-
-        val logoutButton = TextView(activity).apply {
-            text = "退出"
-            textSize = 14f
-            setTextColor(Color.parseColor("#007AFF"))
-            setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
-            background = createRoundedBackground(Color.parseColor("#E3F2FD"), dpToPx(12).toFloat())
-            setOnClickListener {
-                TokenManager.clearTokens()
-                onLogout()
-            }
         }
 
         toolbar.addView(titleText)
-        toolbar.addView(logoutButton)
 
         pathText = TextView(activity).apply {
             id = View.generateViewId()
@@ -132,10 +137,163 @@ class ResourceScreen(
             )
         }
 
+        fab = TextView(activity).apply {
+            id = View.generateViewId()
+            text = "+"
+            textSize = 28f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#007AFF"))
+            }
+            elevation = 6f
+            layoutParams = ConstraintLayout.LayoutParams(
+                dpToPx(56),
+                dpToPx(56)
+            )
+            setOnClickListener { showBottomSheet() }
+        }
+
+        overlay = View(activity).apply {
+            id = View.generateViewId()
+            setBackgroundColor(Color.parseColor("#66000000"))
+            visibility = View.GONE
+            setOnClickListener { hideBottomSheet() }
+            layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        bottomSheet = LinearLayout(activity).apply {
+            id = View.generateViewId()
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+            visibility = View.GONE
+            elevation = 16f
+            layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+            ).apply {
+                matchConstraintPercentHeight = 0.5f
+            }
+        }
+
+        val sheetHandle = View(activity).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(Color.parseColor("#DDDDDD"))
+                cornerRadius = dpToPx(2).toFloat()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                dpToPx(40),
+                dpToPx(4)
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dpToPx(12)
+                bottomMargin = dpToPx(12)
+            }
+        }
+
+        val sheetTitle = TextView(activity).apply {
+            text = "操作"
+            textSize = 18f
+            setTextColor(Color.parseColor("#333333"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dpToPx(20), 0, dpToPx(20), dpToPx(16))
+        }
+
+        bottomSheet.addView(sheetHandle)
+        bottomSheet.addView(sheetTitle)
+
+        val createFolderBtn = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(16))
+            isClickable = true
+            isFocusable = true
+
+            val folderIcon = TextView(activity).apply {
+                text = "📁"
+                textSize = 22f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = dpToPx(16)
+                }
+            }
+
+            val folderLabel = TextView(activity).apply {
+                text = "新建文件夹"
+                textSize = 16f
+                setTextColor(Color.parseColor("#333333"))
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            addView(folderIcon)
+            addView(folderLabel)
+
+            setOnClickListener {
+                hideBottomSheet()
+                showCreateFolderDialog()
+            }
+        }
+
+        bottomSheet.addView(createFolderBtn)
+
+        val uploadFileBtn = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(16))
+            isClickable = true
+            isFocusable = true
+
+            val uploadIcon = TextView(activity).apply {
+                text = "📤"
+                textSize = 22f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = dpToPx(16)
+                }
+            }
+
+            val uploadLabel = TextView(activity).apply {
+                text = "从本地上传"
+                textSize = 16f
+                setTextColor(Color.parseColor("#333333"))
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            addView(uploadIcon)
+            addView(uploadLabel)
+
+            setOnClickListener {
+                hideBottomSheet()
+                requestPickFiles()
+            }
+        }
+
+        bottomSheet.addView(uploadFileBtn)
+
         rootLayout.addView(toolbar)
         rootLayout.addView(pathText)
         rootLayout.addView(scrollView)
         rootLayout.addView(emptyView)
+        rootLayout.addView(overlay)
+        rootLayout.addView(bottomSheet)
+        rootLayout.addView(fab)
 
         val constraintSet = ConstraintSet()
         constraintSet.clone(rootLayout)
@@ -158,11 +316,110 @@ class ResourceScreen(
         constraintSet.connect(emptyView.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
         constraintSet.connect(emptyView.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
 
+        constraintSet.connect(fab.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+        constraintSet.connect(fab.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+        constraintSet.setMargin(fab.id, ConstraintSet.END, dpToPx(20))
+        constraintSet.setMargin(fab.id, ConstraintSet.BOTTOM, dpToPx(20))
+
+        constraintSet.connect(overlay.id, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP)
+        constraintSet.connect(overlay.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+        constraintSet.connect(overlay.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+        constraintSet.connect(overlay.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+
+        constraintSet.connect(bottomSheet.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+        constraintSet.connect(bottomSheet.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+        constraintSet.connect(bottomSheet.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+        constraintSet.connect(bottomSheet.id, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+        constraintSet.constrainPercentHeight(bottomSheet.id, 0.5f)
+
         constraintSet.applyTo(rootLayout)
 
         loadResources()
 
         return rootLayout
+    }
+
+    private fun showBottomSheet() {
+        overlay.visibility = View.VISIBLE
+        bottomSheet.visibility = View.VISIBLE
+        fab.visibility = View.GONE
+    }
+
+    private fun hideBottomSheet() {
+        overlay.visibility = View.GONE
+        bottomSheet.visibility = View.GONE
+        fab.visibility = View.VISIBLE
+    }
+
+    private fun showCreateFolderDialog() {
+        val defaultName = "新建文件夹"
+        val finalName = resolveDuplicateName(defaultName)
+
+        val input = EditText(activity).apply {
+            text = android.text.Editable.Factory.getInstance().newEditable(finalName)
+            setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
+            textSize = 16f
+            setSelection(finalName.length)
+        }
+
+        val container = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(24), dpToPx(8), dpToPx(24), 0)
+            addView(input)
+        }
+
+        AlertDialog.Builder(activity)
+            .setTitle("新建文件夹")
+            .setView(container)
+            .setPositiveButton("确认") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isEmpty()) {
+                    Toast.makeText(activity, "文件夹名称不能为空", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                createFolder(name)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun resolveDuplicateName(baseName: String): String {
+        val folderNames = currentResources
+            .filter { it.type == "folder" }
+            .map { it.name }
+            .toSet()
+
+        if (baseName !in folderNames) return baseName
+
+        var index = 1
+        while ("$baseName($index)" in folderNames) {
+            index++
+        }
+        return "$baseName($index)"
+    }
+
+    private fun createFolder(name: String) {
+        val request = CreateFolderRequest(parentId = currentParentId, name = name)
+        RetrofitClient.api.createFolder(request)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.code == 0) {
+                            Toast.makeText(activity, "文件夹创建成功", Toast.LENGTH_SHORT).show()
+                            loadResources()
+                        } else {
+                            Toast.makeText(activity, "创建失败: ${apiResponse?.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(activity, "创建失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
     private fun loadResources() {
@@ -208,14 +465,8 @@ class ResourceScreen(
     }
 
     private fun displayResources(resources: List<Resource>) {
+        currentResources = resources
         contentContainer.removeAllViews()
-
-        if (resources.isEmpty()) {
-            emptyView.visibility = View.VISIBLE
-            return
-        }
-
-        emptyView.visibility = View.GONE
 
         if (currentParentId != null) {
             val backItem = createResourceItem(
@@ -226,14 +477,21 @@ class ResourceScreen(
             )
             backItem.setOnClickListener {
                 if (pathStack.isNotEmpty()) {
-                    pathStack.removeAt(pathStack.size - 1)
-                    currentParentId = if (pathStack.isNotEmpty()) pathStack.last() else null
+                    val entry = pathStack.removeAt(pathStack.size - 1)
+                    currentParentId = entry.parentId
                     updatePathText()
                     loadResources()
                 }
             }
             contentContainer.addView(backItem)
         }
+
+        if (resources.isEmpty()) {
+            emptyView.visibility = View.VISIBLE
+            return
+        }
+
+        emptyView.visibility = View.GONE
 
         val folders = resources.filter { it.type == "folder" }
         val files = resources.filter { it.type != "folder" }
@@ -246,7 +504,7 @@ class ResourceScreen(
                 extension = folder.extension
             )
             item.setOnClickListener {
-                pathStack.add(currentParentId)
+                pathStack.add(PathEntry(currentParentId, folder.name))
                 currentParentId = folder.id
                 updatePathText()
                 loadResources()
@@ -355,7 +613,8 @@ class ResourceScreen(
         if (pathStack.isEmpty()) {
             pathText.text = "根目录"
         } else {
-            pathText.text = "根目录 > ..."
+            val names = pathStack.map { it.name }
+            pathText.text = "根目录 > ${names.joinToString(" > ")}"
         }
     }
 
@@ -395,5 +654,288 @@ class ResourceScreen(
             dp.toFloat(),
             activity.resources.displayMetrics
         ).toInt()
+    }
+
+    fun onFilesPicked(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        pendingUploadUris = uris
+        showUploadConfirmDialog(uris.size)
+    }
+
+    private fun showUploadConfirmDialog(fileCount: Int) {
+        AlertDialog.Builder(activity)
+            .setTitle("确认上传")
+            .setMessage("已选择 $fileCount 个文件，是否开始上传？")
+            .setPositiveButton("确定") { _, _ ->
+                startUpload(pendingUploadUris)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun startUpload(uris: List<Uri>) {
+        uploadCancelled = false
+        showUploadProgressDialog(uris.size)
+        uploadFileSequentially(uris, 0)
+    }
+
+    private fun showUploadProgressDialog(totalFiles: Int) {
+        uploadProgressBar = ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = 0
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        uploadStatusText = TextView(activity).apply {
+            text = "正在准备上传..."
+            textSize = 14f
+            setTextColor(Color.parseColor("#666666"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(12)
+            }
+        }
+
+        val container = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(24), dpToPx(16), dpToPx(24), 0)
+            addView(uploadProgressBar)
+            addView(uploadStatusText)
+        }
+
+        uploadDialog = AlertDialog.Builder(activity)
+            .setTitle("上传进度")
+            .setView(container)
+            .setPositiveButton("后台上传") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setNegativeButton("取消上传") { dialog, _ ->
+                uploadCancelled = true
+                currentUploadId?.let { cancelCurrentUpload(it) }
+                dialog.dismiss()
+                uploadDialog = null
+                Toast.makeText(activity, "上传已取消", Toast.LENGTH_SHORT).show()
+            }
+            .setCancelable(false)
+            .create()
+        uploadDialog?.show()
+    }
+
+    private fun updateUploadProgress(fileIndex: Int, totalFiles: Int, fileName: String, partIndex: Int, totalParts: Int) {
+        val overallProgress = ((fileIndex - 1) * 100 + (partIndex * 100 / totalParts)) / totalFiles
+        uploadProgressBar?.progress = overallProgress
+        uploadStatusText?.text = "正在上传 $fileIndex/$totalFiles 文件\n文件: $fileName\n分片: $partIndex/$totalParts"
+    }
+
+    private fun uploadFileSequentially(uris: List<Uri>, index: Int) {
+        if (index >= uris.size || uploadCancelled) {
+            if (!uploadCancelled) {
+                uploadDialog?.dismiss()
+                uploadDialog = null
+                Toast.makeText(activity, "上传完成", Toast.LENGTH_SHORT).show()
+                loadResources()
+            }
+            return
+        }
+
+        val uri = uris[index]
+        val fileInfo = getFileInfo(uri)
+
+        if (fileInfo.size == 0L) {
+            Toast.makeText(activity, "${fileInfo.name} 为空文件，已跳过", Toast.LENGTH_SHORT).show()
+            uploadFileSequentially(uris, index + 1)
+            return
+        }
+
+        val partSize = 5L * 1024 * 1024
+        val totalParts = ((fileInfo.size + partSize - 1) / partSize).toInt()
+        val totalFiles = uris.size
+        val request = UploadInitRequest(currentParentId, fileInfo.name, fileInfo.size, null, partSize)
+
+        RetrofitClient.api.initUpload(request).enqueue(object : Callback<ApiResponse> {
+            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    if (apiResponse?.code == 0) {
+                        val initData = parseData(apiResponse.data, UploadInitData::class.java)
+                        if (initData != null) {
+                            currentUploadId = initData.uploadId
+                            updateUploadProgress(index + 1, totalFiles, fileInfo.name, 0, totalParts)
+                            uploadParts(uri, initData.uploadId, fileInfo.size, partSize, 1, totalParts, index + 1, totalFiles, fileInfo.name, mutableListOf()) {
+                                uploadFileSequentially(uris, index + 1)
+                            }
+                        } else {
+                            Toast.makeText(activity, "上传 ${fileInfo.name} 初始化失败", Toast.LENGTH_SHORT).show()
+                            uploadFileSequentially(uris, index + 1)
+                        }
+                    } else {
+                        Toast.makeText(activity, "上传 ${fileInfo.name} 失败: ${apiResponse?.message}", Toast.LENGTH_SHORT).show()
+                        uploadFileSequentially(uris, index + 1)
+                    }
+                } else {
+                    Toast.makeText(activity, "上传 ${fileInfo.name} 失败", Toast.LENGTH_SHORT).show()
+                    uploadFileSequentially(uris, index + 1)
+                }
+            }
+
+            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                uploadFileSequentially(uris, index + 1)
+            }
+        })
+    }
+
+    private fun uploadParts(
+        uri: Uri,
+        uploadId: String,
+        fileSize: Long,
+        partSize: Long,
+        currentPart: Int,
+        totalParts: Int,
+        fileIndex: Int,
+        totalFiles: Int,
+        fileName: String,
+        completedParts: MutableList<CompletedPart>,
+        onComplete: () -> Unit
+    ) {
+        if (uploadCancelled) {
+            cancelCurrentUpload(uploadId)
+            return
+        }
+
+        if (currentPart > totalParts) {
+            completeUpload(uploadId, completedParts, onComplete)
+            return
+        }
+
+        val offset = (currentPart - 1) * partSize
+        val length = minOf(partSize, fileSize - offset)
+        val bytes = readPartBytes(uri, offset, length)
+
+        if (bytes == null) {
+            Toast.makeText(activity, "读取文件失败", Toast.LENGTH_SHORT).show()
+            cancelCurrentUpload(uploadId)
+            return
+        }
+
+        val requestBody = bytes.toRequestBody("application/octet-stream".toMediaType())
+
+        RetrofitClient.api.uploadPart(uploadId, currentPart, requestBody)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.code == 0) {
+                            val partData = parseData(apiResponse.data, UploadPartData::class.java)
+                            val etag = partData?.etag ?: ""
+                            completedParts.add(CompletedPart(currentPart, etag))
+                            updateUploadProgress(fileIndex, totalFiles, fileName, currentPart, totalParts)
+                            uploadParts(uri, uploadId, fileSize, partSize, currentPart + 1, totalParts, fileIndex, totalFiles, fileName, completedParts, onComplete)
+                        } else {
+                            Toast.makeText(activity, "上传分片失败", Toast.LENGTH_SHORT).show()
+                            cancelCurrentUpload(uploadId)
+                        }
+                    } else {
+                        Toast.makeText(activity, "上传分片失败", Toast.LENGTH_SHORT).show()
+                        cancelCurrentUpload(uploadId)
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                    cancelCurrentUpload(uploadId)
+                }
+            })
+    }
+
+    private fun completeUpload(uploadId: String, parts: List<CompletedPart>, onComplete: () -> Unit) {
+        val request = UploadCompleteRequest(parts)
+        RetrofitClient.api.completeUpload(uploadId, request)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.code == 0) {
+                            currentUploadId = null
+                            onComplete()
+                        } else {
+                            Toast.makeText(activity, "完成上传失败: ${apiResponse?.message}", Toast.LENGTH_SHORT).show()
+                            onComplete()
+                        }
+                    } else {
+                        Toast.makeText(activity, "完成上传失败", Toast.LENGTH_SHORT).show()
+                        onComplete()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                    onComplete()
+                }
+            })
+    }
+
+    private fun cancelCurrentUpload(uploadId: String) {
+        currentUploadId = null
+        RetrofitClient.api.cancelUpload(uploadId).enqueue(object : Callback<ApiResponse> {
+            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {}
+            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {}
+        })
+    }
+
+    private fun readPartBytes(uri: Uri, offset: Long, length: Long): ByteArray? {
+        return try {
+            val inputStream = activity.contentResolver.openInputStream(uri) ?: return null
+            var skipped = 0L
+            while (skipped < offset) {
+                val s = inputStream.skip(offset - skipped)
+                if (s <= 0L) break
+                skipped += s
+            }
+            val bytes = ByteArray(length.toInt())
+            var totalRead = 0
+            while (totalRead < length.toInt()) {
+                val read = inputStream.read(bytes, totalRead, length.toInt() - totalRead)
+                if (read == -1) break
+                totalRead += read
+            }
+            inputStream.close()
+            if (totalRead < length.toInt()) null else bytes
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private data class FileInfo(val name: String, val size: Long)
+
+    private fun getFileInfo(uri: Uri): FileInfo {
+        var name = "unknown"
+        var size = 0L
+        val cursor = activity.contentResolver.query(uri, null, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+                if (nameIndex >= 0) name = it.getString(nameIndex)
+                if (sizeIndex >= 0) size = it.getLong(sizeIndex)
+            }
+        }
+        return FileInfo(name, size)
+    }
+
+    private fun <T> parseData(data: Any?, clazz: Class<T>): T? {
+        if (data == null) return null
+        return try {
+            val gson = Gson()
+            val json = gson.toJson(data)
+            gson.fromJson(json, clazz)
+        } catch (e: Exception) {
+            null
+        }
     }
 }
