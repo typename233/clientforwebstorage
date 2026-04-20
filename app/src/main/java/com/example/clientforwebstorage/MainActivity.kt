@@ -2,6 +2,7 @@ package com.example.clientforwebstorage
 
 import android.net.Uri
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.clientforwebstorage.network.TokenManager
@@ -13,6 +14,8 @@ class MainActivity : AppCompatActivity() {
 
     private var mainScreen: MainScreen? = null
     private var onFilesPickedCallback: ((List<Uri>) -> Unit)? = null
+    private var onBackPressedCallback: OnBackPressedCallback? = null
+    private var exitConfirmTime: Long = 0
 
     private val pickFilesLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -59,5 +62,23 @@ class MainActivity : AppCompatActivity() {
         )
         mainScreen = screen
         setContentView(screen.createView())
+        
+        onBackPressedCallback?.remove()
+        onBackPressedCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (screen.handleBackPressed()) {
+                    exitConfirmTime = 0
+                } else {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - exitConfirmTime > 2000) {
+                        exitConfirmTime = currentTime
+                        android.widget.Toast.makeText(this@MainActivity, "再按一次退出应用", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        finish()
+                    }
+                }
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback!!)
     }
 }

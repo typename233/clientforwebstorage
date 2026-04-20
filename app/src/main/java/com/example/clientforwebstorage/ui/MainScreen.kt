@@ -27,6 +27,8 @@ class MainScreen(
     private lateinit var profileScreen: ProfileScreen
 
     private var currentTab = TAB_RESOURCE
+    private var lastSwitchTime: Long = 0
+    private val switchDebounceTime = 250L // 防抖时间（毫秒）
 
     fun createView(): View {
         val rootLayout = ConstraintLayout(activity).apply {
@@ -113,6 +115,13 @@ class MainScreen(
 
     private fun switchTab(tab: Int) {
         if (tab == currentTab) return
+        
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSwitchTime < switchDebounceTime) {
+            return
+        }
+        
+        lastSwitchTime = currentTime
         currentTab = tab
         updateTabStyle()
         showTabContent(tab)
@@ -192,6 +201,14 @@ class MainScreen(
     fun onFilesPicked(uris: List<Uri>) {
         if (currentTab == TAB_RESOURCE) {
             resourceScreen.onFilesPicked(uris)
+        }
+    }
+
+    fun handleBackPressed(): Boolean {
+        return when (currentTab) {
+            TAB_RESOURCE -> resourceScreen.handleBackPressed()
+            TAB_PROFILE -> profileScreen.handleBackPressed()
+            else -> false
         }
     }
 

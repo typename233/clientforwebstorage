@@ -23,6 +23,7 @@ import com.example.clientforwebstorage.network.RetrofitClient
 import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.CompletedPart
 import com.example.clientforwebstorage.network.models.CreateFolderRequest
+import com.example.clientforwebstorage.network.models.RenameRequest
 import com.example.clientforwebstorage.network.models.Resource
 import com.example.clientforwebstorage.network.models.ResourceListData
 import com.example.clientforwebstorage.network.models.UploadCompleteRequest
@@ -52,6 +53,15 @@ class ResourceScreen(
     private lateinit var fab: TextView
     private lateinit var overlay: View
     private lateinit var bottomSheet: LinearLayout
+
+    private var isSelectionMode = false
+    private val selectedIds = mutableSetOf<String>()
+    private lateinit var selectionTopBar: LinearLayout
+    private lateinit var selectionBottomBar: LinearLayout
+    private lateinit var selectionCountText: TextView
+    private lateinit var moreOverlay: View
+    private lateinit var moreSheet: LinearLayout
+    private lateinit var renameActionLayout: LinearLayout
 
     private var uploadCancelled = false
     private var currentUploadId: String? = null
@@ -90,6 +100,51 @@ class ResourceScreen(
         }
 
         toolbar.addView(titleText)
+
+        selectionTopBar = LinearLayout(activity).apply {
+            id = View.generateViewId()
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.parseColor("#007AFF"))
+            setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
+            visibility = View.GONE
+            layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val cancelBtn = TextView(activity).apply {
+            text = "取消"
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
+            setOnClickListener { exitSelectionMode() }
+        }
+
+        selectionCountText = TextView(activity).apply {
+            text = "已选中 0 个文件"
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val selectAllBtn = TextView(activity).apply {
+            text = "全选"
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
+            setOnClickListener { selectAll() }
+        }
+
+        selectionTopBar.addView(cancelBtn)
+        selectionTopBar.addView(selectionCountText)
+        selectionTopBar.addView(selectAllBtn)
 
         pathText = TextView(activity).apply {
             id = View.generateViewId()
@@ -287,13 +342,99 @@ class ResourceScreen(
 
         bottomSheet.addView(uploadFileBtn)
 
+        selectionBottomBar = LinearLayout(activity).apply {
+            id = View.generateViewId()
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(Color.WHITE)
+            setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8))
+            visibility = View.GONE
+            elevation = 8f
+            layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val downloadAction = createActionItem("⬇️", "下载")
+        val shareAction = createActionItem("🔗", "分享")
+        val deleteAction = createActionItem("🗑️", "删除")
+        deleteAction.setOnClickListener { showDeleteConfirmDialog() }
+        val moreAction = createActionItem("⋯", "更多")
+        moreAction.setOnClickListener { showMoreSheet() }
+
+        selectionBottomBar.addView(downloadAction)
+        selectionBottomBar.addView(shareAction)
+        selectionBottomBar.addView(deleteAction)
+        selectionBottomBar.addView(moreAction)
+
+        moreOverlay = View(activity).apply {
+            id = View.generateViewId()
+            setBackgroundColor(Color.parseColor("#66000000"))
+            visibility = View.GONE
+            setOnClickListener { hideMoreSheet() }
+            layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        moreSheet = LinearLayout(activity).apply {
+            id = View.generateViewId()
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+            visibility = View.GONE
+            elevation = 16f
+            setPadding(dpToPx(16), dpToPx(20), dpToPx(16), dpToPx(20))
+            layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val moreTitle = TextView(activity).apply {
+            text = "更多操作"
+            textSize = 16f
+            setTextColor(Color.parseColor("#333333"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(16)
+            }
+        }
+
+        val moreActionsRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        renameActionLayout = createSquareActionItem("✏️", "重命名", true) {
+            hideMoreSheet()
+            showRenameDialog()
+        }
+
+        moreActionsRow.addView(renameActionLayout)
+
+        moreSheet.addView(moreTitle)
+        moreSheet.addView(moreActionsRow)
+
         rootLayout.addView(toolbar)
+        rootLayout.addView(selectionTopBar)
         rootLayout.addView(pathText)
         rootLayout.addView(scrollView)
         rootLayout.addView(emptyView)
         rootLayout.addView(overlay)
         rootLayout.addView(bottomSheet)
         rootLayout.addView(fab)
+        rootLayout.addView(selectionBottomBar)
+        rootLayout.addView(moreOverlay)
+        rootLayout.addView(moreSheet)
 
         val constraintSet = ConstraintSet()
         constraintSet.clone(rootLayout)
@@ -302,21 +443,25 @@ class ResourceScreen(
         constraintSet.connect(toolbar.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
         constraintSet.connect(toolbar.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
 
-        constraintSet.connect(pathText.id, ConstraintSet.TOP, toolbar.id, ConstraintSet.BOTTOM)
+        constraintSet.connect(selectionTopBar.id, ConstraintSet.TOP, toolbar.id, ConstraintSet.BOTTOM)
+        constraintSet.connect(selectionTopBar.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+        constraintSet.connect(selectionTopBar.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+
+        constraintSet.connect(pathText.id, ConstraintSet.TOP, selectionTopBar.id, ConstraintSet.BOTTOM)
         constraintSet.connect(pathText.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
         constraintSet.connect(pathText.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
 
         constraintSet.connect(scrollView.id, ConstraintSet.TOP, pathText.id, ConstraintSet.BOTTOM)
         constraintSet.connect(scrollView.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
         constraintSet.connect(scrollView.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
-        constraintSet.connect(scrollView.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+        constraintSet.connect(scrollView.id, ConstraintSet.BOTTOM, selectionBottomBar.id, ConstraintSet.TOP)
 
         constraintSet.connect(emptyView.id, ConstraintSet.TOP, pathText.id, ConstraintSet.BOTTOM)
         constraintSet.connect(emptyView.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
         constraintSet.connect(emptyView.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
-        constraintSet.connect(emptyView.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+        constraintSet.connect(emptyView.id, ConstraintSet.BOTTOM, selectionBottomBar.id, ConstraintSet.TOP)
 
-        constraintSet.connect(fab.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+        constraintSet.connect(fab.id, ConstraintSet.BOTTOM, selectionBottomBar.id, ConstraintSet.TOP)
         constraintSet.connect(fab.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
         constraintSet.setMargin(fab.id, ConstraintSet.END, dpToPx(20))
         constraintSet.setMargin(fab.id, ConstraintSet.BOTTOM, dpToPx(20))
@@ -331,6 +476,19 @@ class ResourceScreen(
         constraintSet.connect(bottomSheet.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
         constraintSet.connect(bottomSheet.id, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
         constraintSet.constrainPercentHeight(bottomSheet.id, 0.5f)
+
+        constraintSet.connect(selectionBottomBar.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+        constraintSet.connect(selectionBottomBar.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+        constraintSet.connect(selectionBottomBar.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+
+        constraintSet.connect(moreOverlay.id, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP)
+        constraintSet.connect(moreOverlay.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+        constraintSet.connect(moreOverlay.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+        constraintSet.connect(moreOverlay.id, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
+
+        constraintSet.connect(moreSheet.id, ConstraintSet.BOTTOM, selectionBottomBar.id, ConstraintSet.TOP)
+        constraintSet.connect(moreSheet.id, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+        constraintSet.connect(moreSheet.id, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
 
         constraintSet.applyTo(rootLayout)
 
@@ -349,6 +507,286 @@ class ResourceScreen(
         overlay.visibility = View.GONE
         bottomSheet.visibility = View.GONE
         fab.visibility = View.VISIBLE
+    }
+
+    private fun enterSelectionMode(resourceId: String) {
+        isSelectionMode = true
+        selectedIds.clear()
+        selectedIds.add(resourceId)
+        selectionTopBar.visibility = View.VISIBLE
+        selectionBottomBar.visibility = View.VISIBLE
+        fab.visibility = View.GONE
+        pathText.visibility = View.GONE
+        updateSelectionCount()
+        refreshResourceViews()
+    }
+
+    private fun exitSelectionMode() {
+        isSelectionMode = false
+        selectedIds.clear()
+        selectionTopBar.visibility = View.GONE
+        selectionBottomBar.visibility = View.GONE
+        fab.visibility = View.VISIBLE
+        pathText.visibility = View.VISIBLE
+        refreshResourceViews()
+    }
+
+    private fun toggleSelection(resourceId: String) {
+        if (selectedIds.contains(resourceId)) {
+            selectedIds.remove(resourceId)
+            if (selectedIds.isEmpty()) {
+                exitSelectionMode()
+                return
+            }
+        } else {
+            selectedIds.add(resourceId)
+        }
+        updateSelectionCount()
+        refreshResourceViews()
+    }
+
+    private fun selectAll() {
+        for (resource in currentResources) {
+            selectedIds.add(resource.id)
+        }
+        updateSelectionCount()
+        refreshResourceViews()
+    }
+
+    private fun updateSelectionCount() {
+        selectionCountText.text = "已选中 ${selectedIds.size} 个文件"
+    }
+
+    private fun refreshResourceViews() {
+        displayResources(currentResources)
+    }
+
+    private fun showMoreSheet() {
+        val isSingleSelection = selectedIds.size == 1
+        renameActionLayout.apply {
+            alpha = if (isSingleSelection) 1.0f else 0.4f
+            isClickable = isSingleSelection
+        }
+        moreOverlay.visibility = View.VISIBLE
+        moreSheet.visibility = View.VISIBLE
+    }
+
+    private fun hideMoreSheet() {
+        moreOverlay.visibility = View.GONE
+        moreSheet.visibility = View.GONE
+    }
+
+    private fun createSquareActionItem(icon: String, label: String, enabled: Boolean, onClick: () -> Unit): LinearLayout {
+        return LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = dpToPx(16)
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(Color.parseColor("#F5F5F5"))
+                cornerRadius = dpToPx(12).toFloat()
+            }
+            alpha = if (enabled) 1.0f else 0.4f
+            isClickable = enabled
+            setOnClickListener { if (enabled) onClick() }
+
+            val iconView = TextView(activity).apply {
+                text = icon
+                textSize = 28f
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val labelView = TextView(activity).apply {
+                text = label
+                textSize = 12f
+                setTextColor(Color.parseColor("#333333"))
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(8)
+                }
+            }
+
+            addView(iconView)
+            addView(labelView)
+        }
+    }
+
+    private fun showRenameDialog() {
+        val selectedId = selectedIds.firstOrNull() ?: return
+        val resource = currentResources.find { it.id == selectedId } ?: return
+
+        val input = EditText(activity).apply {
+            text = android.text.Editable.Factory.getInstance().newEditable(resource.name)
+            setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
+            textSize = 16f
+            setSelection(resource.name.length)
+        }
+
+        val container = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(24), dpToPx(8), dpToPx(24), 0)
+            addView(input)
+        }
+
+        AlertDialog.Builder(activity)
+            .setTitle("重命名")
+            .setView(container)
+            .setPositiveButton("确认") { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isEmpty()) {
+                    Toast.makeText(activity, "名称不能为空", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                renameResource(selectedId, newName)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun renameResource(resourceId: String, newName: String) {
+        val request = RenameRequest(name = newName)
+        RetrofitClient.api.renameResource(resourceId, request)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.code == 0) {
+                            Toast.makeText(activity, "重命名成功", Toast.LENGTH_SHORT).show()
+                            exitSelectionMode()
+                            loadResources()
+                        } else {
+                            Toast.makeText(activity, "重命名失败: ${apiResponse?.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(activity, "重命名失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun showDeleteConfirmDialog() {
+        val count = selectedIds.size
+        AlertDialog.Builder(activity)
+            .setTitle("确认删除")
+            .setMessage("确定要删除选中的 $count 个文件吗？删除后可在回收站恢复。")
+            .setPositiveButton("删除") { _, _ ->
+                deleteSelectedResources()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun deleteSelectedResources() {
+        val ids = selectedIds.toList()
+        var successCount = 0
+        var failCount = 0
+        val total = ids.size
+
+        for (id in ids) {
+            RetrofitClient.api.deleteResource(id)
+                .enqueue(object : Callback<ApiResponse> {
+                    override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                        val errorBody = response.errorBody()?.string()
+                        android.util.Log.d("ResourceScreen", "delete response: code=${response.code()}, errorBody=$errorBody")
+                        
+                        // 如果 HTTP 状态码是 200 或 204，且 responseBody 为空，也视为成功
+                        if (response.isSuccessful) {
+                            val apiResponse = response.body()
+                            android.util.Log.d("ResourceScreen", "delete body: $apiResponse")
+                            
+                            if (apiResponse == null) {
+                                // 响应体为空，但 HTTP 状态码成功，视为删除成功
+                                successCount++
+                                android.util.Log.d("ResourceScreen", "delete success (empty body)")
+                            } else if (apiResponse.code == 0) {
+                                successCount++
+                            } else {
+                                failCount++
+                                android.util.Log.d("ResourceScreen", "delete failed: ${apiResponse.message}")
+                            }
+                        } else {
+                            failCount++
+                            android.util.Log.d("ResourceScreen", "delete failed: $errorBody")
+                        }
+
+                        if (successCount + failCount == total) {
+                            if (failCount == 0) {
+                                Toast.makeText(activity, "删除成功", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(activity, "删除完成，成功 $successCount 个，失败 $failCount 个", Toast.LENGTH_SHORT).show()
+                            }
+                            exitSelectionMode()
+                            loadResources()
+                        }
+                    }
+
+                    override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                        failCount++
+                        android.util.Log.d("ResourceScreen", "delete failure: ${t.message}", t)
+                        if (successCount + failCount == total) {
+                            Toast.makeText(activity, "删除完成，成功 $successCount 个，失败 $failCount 个", Toast.LENGTH_SHORT).show()
+                            exitSelectionMode()
+                            loadResources()
+                        }
+                    }
+                })
+        }
+    }
+
+    private fun createActionItem(icon: String, label: String): LinearLayout {
+        return LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8))
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+
+            val iconView = TextView(activity).apply {
+                text = icon
+                textSize = 24f
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val labelView = TextView(activity).apply {
+                text = label
+                textSize = 12f
+                setTextColor(Color.parseColor("#666666"))
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(4)
+                }
+            }
+
+            addView(iconView)
+            addView(labelView)
+        }
     }
 
     private fun showCreateFolderDialog() {
@@ -501,13 +939,24 @@ class ResourceScreen(
                 name = folder.name,
                 type = folder.type,
                 size = folder.size,
-                extension = folder.extension
+                extension = folder.extension,
+                isSelected = selectedIds.contains(folder.id)
             )
             item.setOnClickListener {
-                pathStack.add(PathEntry(currentParentId, folder.name))
-                currentParentId = folder.id
-                updatePathText()
-                loadResources()
+                if (isSelectionMode) {
+                    toggleSelection(folder.id)
+                } else {
+                    pathStack.add(PathEntry(currentParentId, folder.name))
+                    currentParentId = folder.id
+                    updatePathText()
+                    loadResources()
+                }
+            }
+            item.setOnLongClickListener {
+                if (!isSelectionMode) {
+                    enterSelectionMode(folder.id)
+                }
+                true
             }
             contentContainer.addView(item)
         }
@@ -517,17 +966,29 @@ class ResourceScreen(
                 name = file.name,
                 type = file.type,
                 size = file.size,
-                extension = file.extension
+                extension = file.extension,
+                isSelected = selectedIds.contains(file.id)
             )
+            item.setOnClickListener {
+                if (isSelectionMode) {
+                    toggleSelection(file.id)
+                }
+            }
+            item.setOnLongClickListener {
+                if (!isSelectionMode) {
+                    enterSelectionMode(file.id)
+                }
+                true
+            }
             contentContainer.addView(item)
         }
     }
 
-    private fun createResourceItem(name: String, type: String, size: Long, extension: String?): View {
+    private fun createResourceItem(name: String, type: String, size: Long, extension: String?, isSelected: Boolean = false): View {
         val card = CardView(activity).apply {
             radius = dpToPx(12).toFloat()
             cardElevation = dpToPx(2).toFloat()
-            setCardBackgroundColor(Color.WHITE)
+            setCardBackgroundColor(if (isSelected) Color.parseColor("#E3F2FD") else Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -591,9 +1052,9 @@ class ResourceScreen(
         textLayout.addView(nameText)
         textLayout.addView(sizeText)
 
-        val arrowText = TextView(activity).apply {
-            text = if (type == "folder") "›" else ""
-            textSize = 20f
+        val checkText = TextView(activity).apply {
+            text = if (isSelected) "✅" else if (isSelectionMode) "⭕" else if (type == "folder") "›" else ""
+            textSize = if (isSelectionMode) 20f else 20f
             setTextColor(Color.parseColor("#CCCCCC"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -603,7 +1064,7 @@ class ResourceScreen(
 
         innerLayout.addView(iconText)
         innerLayout.addView(textLayout)
-        innerLayout.addView(arrowText)
+        innerLayout.addView(checkText)
         card.addView(innerLayout)
 
         return card
@@ -660,6 +1121,21 @@ class ResourceScreen(
         if (uris.isEmpty()) return
         pendingUploadUris = uris
         showUploadConfirmDialog(uris.size)
+    }
+
+    fun handleBackPressed(): Boolean {
+        if (isSelectionMode) {
+            exitSelectionMode()
+            return true
+        }
+        if (pathStack.isNotEmpty()) {
+            val entry = pathStack.removeAt(pathStack.size - 1)
+            currentParentId = entry.parentId
+            updatePathText()
+            loadResources()
+            return true
+        }
+        return false
     }
 
     private fun showUploadConfirmDialog(fileCount: Int) {

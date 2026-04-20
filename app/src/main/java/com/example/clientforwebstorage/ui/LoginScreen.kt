@@ -228,6 +228,7 @@ class LoginScreen(
                                 val loginData = parseLoginData(apiResponse.data)
                                 if (loginData != null) {
                                     TokenManager.saveTokens(loginData.accessToken, loginData.refreshToken)
+                                    TokenManager.saveUserProfile(loginData.user?.nickname, loginData.user?.avatarUrl)
                                     Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
                                     onLoginSuccess()
                                 } else {
