@@ -2,6 +2,7 @@ package com.example.clientforwebstorage.ui
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -19,6 +20,7 @@ import android.widget.Toast
 import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.content.FileProvider
 import com.example.clientforwebstorage.network.RetrofitClient
 import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.CompletedPart
@@ -30,13 +32,16 @@ import com.example.clientforwebstorage.network.models.UploadCompleteRequest
 import com.example.clientforwebstorage.network.models.UploadInitData
 import com.example.clientforwebstorage.network.models.UploadInitRequest
 import com.example.clientforwebstorage.network.models.UploadPartData
+import com.example.clientforwebstorage.network.models.UrlResponse
+import com.example.clientforwebstorage.network.models.CreateShareRequest
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
-import retrofit2.Response
 import retrofit2.Callback
+import retrofit2.Response
+import java.io.File
 
 class ResourceScreen(
     private val activity: Activity,
@@ -357,7 +362,9 @@ class ResourceScreen(
         }
 
         val downloadAction = createActionItem("⬇️", "下载")
+        downloadAction.setOnClickListener { downloadSelectedResources() }
         val shareAction = createActionItem("🔗", "分享")
+        shareAction.setOnClickListener { showShareDialog() }
         val deleteAction = createActionItem("🗑️", "删除")
         deleteAction.setOnClickListener { showDeleteConfirmDialog() }
         val moreAction = createActionItem("⋯", "更多")
@@ -972,6 +979,8 @@ class ResourceScreen(
             item.setOnClickListener {
                 if (isSelectionMode) {
                     toggleSelection(file.id)
+                } else {
+                    previewResource(file)
                 }
             }
             item.setOnLongClickListener {
@@ -1123,6 +1132,123 @@ class ResourceScreen(
         showUploadConfirmDialog(uris.size)
     }
 
+    private fun downloadSelectedResources() {
+        val ids = selectedIds.toList()
+        if (ids.isEmpty()) {
+            Toast.makeText(activity, "请选择要下载的文件", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        for (id in ids) {
+            downloadResource(id)
+        }
+        exitSelectionMode()
+    }
+
+    private fun downloadResource(resourceId: String) {
+        RetrofitClient.api.getDownloadUrl(resourceId)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.code == 0) {
+                            val urlResponse = parseUrlResponse(apiResponse.data)
+                            if (urlResponse != null) {
+                                openUrlInBrowser(urlResponse.url)
+                            } else {
+                                Toast.makeText(activity, "获取下载链接失败", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(activity, "获取下载链接失败：${apiResponse?.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(activity, "获取下载链接失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun parseUrlResponse(data: Any?): UrlResponse? {
+        if (data == null) return null
+        return try {
+            val gson = Gson()
+            val json = gson.toJson(data)
+            val type = object : com.google.gson.reflect.TypeToken<UrlResponse>() {}.type
+            gson.fromJson(json, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun openUrlInBrowser(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(activity, "无法打开链接", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun previewResource(resource: Resource) {
+        if (isSelectionMode) {
+            toggleSelection(resource.id)
+            return
+        }
+
+        if (resource.type == "folder") {
+            pathStack.add(PathEntry(currentParentId, resource.name))
+            currentParentId = resource.id
+            updatePathText()
+            loadResources()
+            return
+        }
+
+        openPreviewActivity(resource.id, resource.name)
+    }
+
+    private fun openPreviewActivity(resourceId: String, resourceName: String) {
+        val intent = android.content.Intent(activity, PreviewActivity::class.java).apply {
+            putExtra("resourceId", resourceId)
+            putExtra("resourceName", resourceName)
+        }
+        activity.startActivity(intent)
+    }
+
+    private fun openFileWithSystemEditor(url: String, resource: Resource) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.setDataAndType(Uri.parse(url), getMimeType(resource.extension))
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(activity, "无法打开文件：${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getMimeType(extension: String?): String {
+        return when (extension?.lowercase()) {
+            "txt", "log" -> "text/plain"
+            "pdf" -> "application/pdf"
+            "doc", "docx" -> "application/msword"
+            "xls", "xlsx" -> "application/vnd.ms-excel"
+            "ppt", "pptx" -> "application/vnd.ms-powerpoint"
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
+            "mp3" -> "audio/mpeg"
+            "mp4" -> "video/mp4"
+            "html", "htm" -> "text/html"
+            "json" -> "application/json"
+            "xml" -> "application/xml"
+            "csv" -> "text/csv"
+            else -> "*/*"
+        }
+    }
+
     fun handleBackPressed(): Boolean {
         if (isSelectionMode) {
             exitSelectionMode()
@@ -1136,6 +1262,98 @@ class ResourceScreen(
             return true
         }
         return false
+    }
+
+    private fun showShareDialog() {
+        val ids = selectedIds.toList()
+        if (ids.isEmpty()) {
+            Toast.makeText(activity, "请选择要分享的文件", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val builder = AlertDialog.Builder(activity)
+        builder.setTitle("创建分享")
+
+        val layout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val needCodeCheckBox = android.widget.CheckBox(activity).apply {
+            text = "需要提取码"
+            isChecked = true
+        }
+        layout.addView(needCodeCheckBox)
+
+        val codeInput = android.widget.EditText(activity).apply {
+            hint = "提取码（4 位）"
+            filters = arrayOf(android.text.InputFilter.LengthFilter(4))
+            visibility = android.view.View.VISIBLE
+        }
+        layout.addView(codeInput)
+
+        val allowPreviewCheckBox = android.widget.CheckBox(activity).apply {
+            text = "允许预览"
+            isChecked = true
+        }
+        layout.addView(allowPreviewCheckBox)
+
+        val allowDownloadCheckBox = android.widget.CheckBox(activity).apply {
+            text = "允许下载"
+            isChecked = true
+        }
+        layout.addView(allowDownloadCheckBox)
+
+        builder.setView(layout)
+
+        builder.setPositiveButton("创建") { _, _ ->
+            val needCode = needCodeCheckBox.isChecked
+            val code = if (needCode) codeInput.text.toString().takeIf { it.length == 4 } else null
+            val allowPreview = allowPreviewCheckBox.isChecked
+            val allowDownload = allowDownloadCheckBox.isChecked
+
+            val request = CreateShareRequest(
+                resourceIds = ids,
+                expiredAt = null,
+                needCode = needCode,
+                code = code,
+                allowPreview = allowPreview,
+                allowDownload = allowDownload,
+                maxAccessCount = null
+            )
+
+            createShare(request)
+        }
+
+        builder.setNegativeButton("取消", null)
+        builder.show()
+    }
+
+    private fun createShare(request: CreateShareRequest) {
+        RetrofitClient.api.createShare(request)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.code == 0) {
+                            Toast.makeText(activity, "分享创建成功", Toast.LENGTH_SHORT).show()
+                            exitSelectionMode()
+                        } else {
+                            Toast.makeText(activity, "创建失败：${apiResponse?.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(activity, "创建失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
     private fun showUploadConfirmDialog(fileCount: Int) {

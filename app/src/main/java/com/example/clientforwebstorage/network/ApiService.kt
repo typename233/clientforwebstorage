@@ -1,6 +1,7 @@
 package com.example.clientforwebstorage.network
 import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.CreateFolderRequest
+import com.example.clientforwebstorage.network.models.CreateShareRequest
 import com.example.clientforwebstorage.network.models.LoginRequest
 import com.example.clientforwebstorage.network.models.PurgeRecycleRequest
 import com.example.clientforwebstorage.network.models.RenameRequest
@@ -75,6 +76,32 @@ interface ApiService {
     fun getUserActivities(
         @Query("page") page: Int?,
         @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
+    @GET("api/v1/resources/{resourceId}/preview-url")
+    fun getPreviewUrl(
+        @Path("resourceId") resourceId: String
+    ): Call<ApiResponse>
+
+    @GET("api/v1/resources/{resourceId}/download-url")
+    fun getDownloadUrl(
+        @Path("resourceId") resourceId: String
+    ): Call<ApiResponse>
+
+    @POST("api/v1/shares")
+    fun createShare(
+        @Body request: CreateShareRequest
+    ): Call<ApiResponse>
+
+    @GET("api/v1/shares")
+    fun getShareList(
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
+    @POST("api/v1/shares/{shareId}/revoke")
+    fun revokeShare(
+        @Path("shareId") shareId: String
     ): Call<ApiResponse>
 
     @POST("api/v1/uploads/init")
