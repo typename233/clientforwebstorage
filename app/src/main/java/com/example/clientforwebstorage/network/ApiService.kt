@@ -71,6 +71,12 @@ interface ApiService {
         @Body request: PurgeRecycleRequest
     ): Call<ApiResponse>
 
+    @GET("api/v1/me/activities")
+    fun getUserActivities(
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
     @POST("api/v1/uploads/init")
     fun initUpload(@Body request: UploadInitRequest): Call<ApiResponse>
 

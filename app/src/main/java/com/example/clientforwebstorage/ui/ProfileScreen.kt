@@ -22,7 +22,8 @@ import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.RecycleResource
 import com.example.clientforwebstorage.network.models.RecycleResourceListData
 import com.example.clientforwebstorage.network.models.PurgeRecycleRequest
-import com.example.clientforwebstorage.network.models.PurgeRecycleData
+import com.example.clientforwebstorage.network.models.UserActivity
+import com.example.clientforwebstorage.network.models.UserActivityListData
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import retrofit2.Call
@@ -44,6 +45,11 @@ class ProfileScreen(
     private var recycleBinResources: List<RecycleResource> = emptyList()
     private var recycleBinSelectedIds = mutableSetOf<String>()
     private var isRecycleBinSelectionMode = false
+    private var activityOverlay: View? = null
+    private var activityPanel: LinearLayout? = null
+    private var activityContent: LinearLayout? = null
+    private var activityEmptyView: TextView? = null
+    private var activityList: List<UserActivity> = emptyList()
 
     fun createView(): View {
         val rootLayout = ConstraintLayout(activity).apply {
@@ -253,8 +259,12 @@ class ProfileScreen(
             val recycleBinItem = createFunctionItem("🗑️", "回收站") {
                 showRecycleBin()
             }
+            val activityItem = createFunctionItem("📋", "历史操作") {
+                showUserActivities()
+            }
 
             innerLayout.addView(recycleBinItem)
+            innerLayout.addView(activityItem)
             addView(innerLayout)
         }
     }
@@ -918,6 +928,342 @@ class ProfileScreen(
             hideRecycleBin()
             return true
         }
+        if (activityOverlay != null && activityPanel != null) {
+            hideUserActivities()
+            return true
+        }
         return false
+    }
+
+    private fun showUserActivities() {
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        val overlay = View(activity).apply {
+            setBackgroundColor(Color.parseColor("#66000000"))
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setOnClickListener { hideUserActivities() }
+        }
+
+        val panel = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (rootView.height * 0.85).toInt()
+            )
+        }
+
+        val headerLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14))
+            setBackgroundColor(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+            val backBtn = TextView(activity).apply {
+                text = "← 返回"
+                textSize = 16f
+                setTextColor(Color.parseColor("#007AFF"))
+                setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+                setOnClickListener { hideUserActivities() }
+            }
+
+            val titleView = TextView(activity).apply {
+                text = "历史操作"
+                textSize = 18f
+                setTextColor(Color.parseColor("#333333"))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            addView(backBtn)
+            addView(titleView)
+        }
+
+        val scrollView = ScrollView(activity).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        }
+
+        val contentLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8))
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        scrollView.addView(contentLayout)
+
+        val emptyView = TextView(activity).apply {
+            text = "暂无历史操作"
+            textSize = 16f
+            setTextColor(Color.parseColor("#999999"))
+            gravity = Gravity.CENTER
+            setPadding(0, dpToPx(60), 0, 0)
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        panel.addView(headerLayout)
+        panel.addView(scrollView)
+        panel.addView(emptyView)
+
+        val panelWrapper = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.BOTTOM
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+        panelWrapper.addView(panel)
+
+        rootView.addView(overlay)
+        rootView.addView(panelWrapper)
+
+        activityOverlay = overlay
+        activityPanel = panelWrapper
+        activityContent = contentLayout
+        activityEmptyView = emptyView
+
+        loadUserActivities()
+    }
+
+    private fun hideUserActivities() {
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        activityOverlay?.let { rootView.removeView(it) }
+        activityPanel?.let { rootView.removeView(it) }
+        activityOverlay = null
+        activityPanel = null
+        activityContent = null
+        activityEmptyView = null
+    }
+
+    private fun loadUserActivities() {
+        RetrofitClient.api.getUserActivities(1, 50)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.code == 0) {
+                            val activityListData = parseUserActivityListData(apiResponse.data)
+                            if (activityListData != null) {
+                                displayUserActivities(activityListData.items)
+                            } else {
+                                displayUserActivities(emptyList())
+                            }
+                        } else {
+                            displayUserActivities(emptyList())
+                        }
+                    } else {
+                        displayUserActivities(emptyList())
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                    displayUserActivities(emptyList())
+                }
+            })
+    }
+
+    private fun parseUserActivityListData(data: Any?): UserActivityListData? {
+        if (data == null) return null
+        return try {
+            val gson = Gson()
+            val json = gson.toJson(data)
+            val type = object : TypeToken<UserActivityListData>() {}.type
+            gson.fromJson(json, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun displayUserActivities(activities: List<UserActivity>) {
+        activityList = activities
+        val content = activityContent ?: return
+        val emptyView = activityEmptyView ?: return
+        content.removeAllViews()
+
+        if (activities.isEmpty()) {
+            emptyView.visibility = View.VISIBLE
+            return
+        }
+
+        emptyView.visibility = View.GONE
+
+        for (userActivity in activities) {
+            val item = createActivityItem(userActivity)
+            content.addView(item)
+        }
+    }
+
+    private fun createActivityItem(userActivity: UserActivity): View {
+        val card = CardView(activity).apply {
+            radius = dpToPx(12).toFloat()
+            cardElevation = dpToPx(2).toFloat()
+            setCardBackgroundColor(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, dpToPx(4), 0, dpToPx(4))
+            }
+        }
+
+        val innerLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14))
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val topLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val eventTypeText = TextView(activity).apply {
+            text = formatEventType(userActivity.eventType)
+            textSize = 16f
+            setTextColor(Color.parseColor("#333333"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val resultBadge = TextView(activity).apply {
+            text = if (userActivity.result == "success") "✓" else "✗"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            background = createRoundedBackground(
+                if (userActivity.result == "success") Color.parseColor("#4CAF50") else Color.parseColor("#F44336"),
+                dpToPx(12).toFloat()
+            )
+            setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginStart = dpToPx(8)
+            }
+        }
+
+        topLayout.addView(eventTypeText)
+        topLayout.addView(resultBadge)
+
+        val metaLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8)
+            }
+        }
+
+        val metaInfo = parseMetadata(userActivity.metadata)
+        if (metaInfo.isNotEmpty()) {
+            for ((key, value) in metaInfo) {
+                val metaText = TextView(activity).apply {
+                    text = "$key: $value"
+                    textSize = 12f
+                    setTextColor(Color.parseColor("#666666"))
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = dpToPx(2)
+                    }
+                }
+                metaLayout.addView(metaText)
+            }
+        }
+
+        val timeText = TextView(activity).apply {
+            text = userActivity.createdAt.replace("T", " ")
+            textSize = 12f
+            setTextColor(Color.parseColor("#999999"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(8)
+            }
+        }
+
+        innerLayout.addView(topLayout)
+        if (metaLayout.childCount > 0) {
+            innerLayout.addView(metaLayout)
+        }
+        innerLayout.addView(timeText)
+        card.addView(innerLayout)
+
+        return card
+    }
+
+    private fun formatEventType(eventType: String): String {
+        return when (eventType) {
+            "resource_list" -> "查看资源列表"
+            "resource_create" -> "创建资源"
+            "resource_update" -> "更新资源"
+            "resource_delete" -> "删除资源"
+            "resource_restore" -> "恢复资源"
+            "resource_purge" -> "彻底删除"
+            "folder_create" -> "创建文件夹"
+            "file_upload" -> "上传文件"
+            "file_download" -> "下载文件"
+            "user_login" -> "用户登录"
+            "user_logout" -> "用户登出"
+            else -> eventType
+        }
+    }
+
+    private fun parseMetadata(metadata: String): Map<String, String> {
+        return try {
+            val gson = Gson()
+            val jsonElement = gson.fromJson(metadata, com.google.gson.JsonElement::class.java)
+            if (jsonElement.isJsonObject) {
+                val jsonObj = jsonElement.asJsonObject
+                val result = mutableMapOf<String, String>()
+                for ((key, value) in jsonObj.entrySet()) {
+                    if (!key.equals("requestId", ignoreCase = true)) {
+                        result[key] = value.toString().replace("\"", "")
+                    }
+                }
+                result
+            } else {
+                emptyMap()
+            }
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 }
