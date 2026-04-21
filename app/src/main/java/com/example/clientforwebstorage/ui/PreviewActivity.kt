@@ -32,8 +32,8 @@ class PreviewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_preview)
 
-        resourceId = intent.getStringExtra("resourceId") ?: ""
-        resourceName = intent.getStringExtra("resourceName") ?: ""
+        resourceId = intent.getStringExtra("resource_id") ?: ""
+        resourceName = intent.getStringExtra("resource_name") ?: ""
 
         webView = findViewById(R.id.webView)
         titleText = findViewById(R.id.titleText)
@@ -102,9 +102,18 @@ class PreviewActivity : AppCompatActivity() {
     }
 
     private fun loadPreviewUrl() {
+        if (resourceId.isEmpty()) {
+            android.util.Log.d("PreviewActivity", "resourceId is empty")
+            Toast.makeText(this, "资源ID为空", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        android.util.Log.d("PreviewActivity", "loading preview for resourceId: $resourceId")
+        
         RetrofitClient.api.getPreviewUrl(resourceId)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    android.util.Log.d("PreviewActivity", "response code: ${response.code()}")
                     if (response.isSuccessful) {
                         val apiResponse = response.body()
                         android.util.Log.d("PreviewActivity", "response body: $apiResponse")
@@ -137,15 +146,17 @@ class PreviewActivity : AppCompatActivity() {
                                     loadTextContent(previewResponse.url)
                                 }
                             } else {
-                                Toast.makeText(this@PreviewActivity, "获取预览链接失败", Toast.LENGTH_SHORT).show()
+                                android.util.Log.d("PreviewActivity", "parsePreviewUrlResponse returned null")
+                                Toast.makeText(this@PreviewActivity, "获取预览链接失败：解析数据失败", Toast.LENGTH_SHORT).show()
                             }
                         } else {
+                            android.util.Log.d("PreviewActivity", "api response code: ${apiResponse?.code}, message: ${apiResponse?.message}")
                             Toast.makeText(this@PreviewActivity, "获取预览链接失败：${apiResponse?.message}", Toast.LENGTH_SHORT).show()
                         }
                     } else {
                         val errorBody = response.errorBody()?.string()
                         android.util.Log.d("PreviewActivity", "error: code=${response.code()}, body=$errorBody")
-                        Toast.makeText(this@PreviewActivity, "获取预览链接失败", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PreviewActivity, "获取预览链接失败：服务器错误 ${response.code()}", Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -176,6 +187,8 @@ class PreviewActivity : AppCompatActivity() {
     }
 
     private fun loadTextContent(url: String) {
+        android.util.Log.d("PreviewActivity", "loading text content from: $url")
+        
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -187,6 +200,7 @@ class PreviewActivity : AppCompatActivity() {
 
         client.newCall(request).enqueue(object : okhttp3.Callback {
             override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                android.util.Log.d("PreviewActivity", "loadTextContent failure: ${e.message}", e)
                 runOnUiThread {
                     val html = createTextHtml("加载失败：${e.message}")
                     webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
@@ -194,7 +208,9 @@ class PreviewActivity : AppCompatActivity() {
             }
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                android.util.Log.d("PreviewActivity", "loadTextContent response code: ${response.code}")
                 val body = response.body?.string()
+                android.util.Log.d("PreviewActivity", "loadTextContent body length: ${body?.length}")
                 runOnUiThread {
                     val content = body ?: "文件内容为空"
                     val html = createTextHtml(content)
