@@ -14,9 +14,11 @@ import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.PreviewUrlResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import okhttp3.OkHttpClient
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.util.concurrent.TimeUnit
 
 class PreviewActivity : AppCompatActivity() {
 
@@ -132,7 +134,7 @@ class PreviewActivity : AppCompatActivity() {
                                     """.trimIndent()
                                     webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                                 } else {
-                                    webView.loadUrl(previewResponse.url)
+                                    loadTextContent(previewResponse.url)
                                 }
                             } else {
                                 Toast.makeText(this@PreviewActivity, "获取预览链接失败", Toast.LENGTH_SHORT).show()
@@ -171,5 +173,79 @@ class PreviewActivity : AppCompatActivity() {
     override fun onDestroy() {
         webView.destroy()
         super.onDestroy()
+    }
+
+    private fun loadTextContent(url: String) {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .build()
+
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                runOnUiThread {
+                    val html = createTextHtml("加载失败：${e.message}")
+                    webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                }
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                val body = response.body?.string()
+                runOnUiThread {
+                    val content = body ?: "文件内容为空"
+                    val html = createTextHtml(content)
+                    webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                }
+            }
+        })
+    }
+
+    private fun createTextHtml(content: String): String {
+        val escapedContent = content
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+
+        return buildString {
+            appendLine("<!DOCTYPE html>")
+            appendLine("<html>")
+            appendLine("<head>")
+            appendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">")
+            appendLine("    <style>")
+            appendLine("        * { box-sizing: border-box; }")
+            appendLine("        body { ")
+            appendLine("            margin: 0; ")
+            appendLine("            padding: 16px; ")
+            appendLine("            background: #f5f5f5; ")
+            appendLine("            font-family: monospace;")
+            appendLine("            font-size: 14px;")
+            appendLine("            line-height: 1.5;")
+            appendLine("            max-width: 100%;")
+            appendLine("            overflow-x: hidden;")
+            appendLine("        }")
+            appendLine("        pre { ")
+            appendLine("            margin: 0; ")
+            appendLine("            padding: 16px; ")
+            appendLine("            background: white; ")
+            appendLine("            border-radius: 8px;")
+            appendLine("            box-shadow: 0 2px 4px rgba(0,0,0,0.1);")
+            appendLine("            white-space: pre-wrap;")
+            appendLine("            word-wrap: break-word;")
+            appendLine("            overflow-wrap: break-word;")
+            appendLine("            word-break: break-all;")
+            appendLine("            max-width: 100%;")
+            appendLine("            overflow-x: auto;")
+            appendLine("        }")
+            appendLine("    </style>")
+            appendLine("</head>")
+            appendLine("<body>")
+            appendLine("    <pre>$escapedContent</pre>")
+            appendLine("</body>")
+            appendLine("</html>")
+        }
     }
 }

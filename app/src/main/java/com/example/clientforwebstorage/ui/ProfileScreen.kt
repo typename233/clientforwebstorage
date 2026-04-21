@@ -26,6 +26,7 @@ import com.example.clientforwebstorage.network.models.UserActivity
 import com.example.clientforwebstorage.network.models.UserActivityListData
 import com.example.clientforwebstorage.network.models.Share
 import com.example.clientforwebstorage.network.models.ShareListData
+import com.example.clientforwebstorage.network.models.RevokeShareResponse
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import retrofit2.Call
@@ -1405,13 +1406,19 @@ class ProfileScreen(
     }
 
     private fun loadShares() {
+        android.util.Log.d("ProfileScreen", "loadShares called")
         RetrofitClient.api.getShareList(1, 100)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    android.util.Log.d("ProfileScreen", "loadShares response code: ${response.code()}")
+                    android.util.Log.d("ProfileScreen", "loadShares response body: ${response.body()}")
                     if (response.isSuccessful) {
                         val apiResponse = response.body()
+                        android.util.Log.d("ProfileScreen", "loadShares apiResponse: $apiResponse")
                         if (apiResponse?.code == 0) {
+                            android.util.Log.d("ProfileScreen", "loadShares data: ${apiResponse.data}")
                             val shareListData = parseShareListData(apiResponse.data)
+                            android.util.Log.d("ProfileScreen", "loadShares parsed: $shareListData")
                             if (shareListData != null) {
                                 displayShares(shareListData.items)
                             } else {
@@ -1426,6 +1433,7 @@ class ProfileScreen(
                 }
 
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    android.util.Log.e("ProfileScreen", "loadShares onFailure: ${t.message}", t)
                     Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
                     displayShares(emptyList())
                 }
@@ -1507,12 +1515,21 @@ class ProfileScreen(
         }
 
         val statusBadge = TextView(activity).apply {
+            val isRevoked = share.status == "revoked" || share.revoked == true || share.alreadyRevoked == true
             val isExpired = isShareExpired(share)
-            text = if (isExpired) "已过期" else "有效"
+            text = when {
+                isRevoked -> "已撤销"
+                isExpired -> "已过期"
+                else -> "有效"
+            }
             textSize = 12f
             setTextColor(Color.WHITE)
             background = createRoundedBackground(
-                if (isExpired) Color.parseColor("#999999") else Color.parseColor("#4CAF50"),
+                when {
+                    isRevoked -> Color.parseColor("#999999")
+                    isExpired -> Color.parseColor("#FF9800")
+                    else -> Color.parseColor("#4CAF50")
+                },
                 dpToPx(12).toFloat()
             )
             setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
@@ -1538,7 +1555,7 @@ class ProfileScreen(
         }
 
         val resourceCountText = TextView(activity).apply {
-            val resourceCount = share.resourceIds?.size ?: 0
+            val resourceCount = share.resourceCount ?: share.resourceIds?.size ?: 0
             text = "包含 $resourceCount 个资源"
             textSize = 12f
             setTextColor(Color.parseColor("#666666"))
@@ -1620,16 +1637,18 @@ class ProfileScreen(
             }
         }
 
-        val revokeBtn = TextView(activity).apply {
-            text = "撤销分享"
-            textSize = 14f
-            setTextColor(Color.parseColor("#FF3B30"))
-            setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
-            background = createRoundedBackground(Color.parseColor("#FFE5E5"), dpToPx(16).toFloat())
-            setOnClickListener { revokeShare(share.id) }
+        val isRevoked = share.status == "revoked" || share.revoked == true || share.alreadyRevoked == true
+        if (!isRevoked) {
+            val revokeBtn = TextView(activity).apply {
+                text = "撤销分享"
+                textSize = 14f
+                setTextColor(Color.parseColor("#FF3B30"))
+                setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
+                background = createRoundedBackground(Color.parseColor("#FFE5E5"), dpToPx(16).toFloat())
+                setOnClickListener { revokeShare(share.id) }
+            }
+            actionLayout.addView(revokeBtn)
         }
-
-        actionLayout.addView(revokeBtn)
 
         innerLayout.addView(topLayout)
         innerLayout.addView(infoLayout)
@@ -1651,6 +1670,7 @@ class ProfileScreen(
     }
 
     private fun revokeShare(shareId: String) {
+        android.util.Log.d("ProfileScreen", "revokeShare called with shareId: $shareId")
         AlertDialog.Builder(activity)
             .setTitle("确认撤销")
             .setMessage("确定要撤销此分享吗？撤销后将无法恢复。")
@@ -1658,25 +1678,69 @@ class ProfileScreen(
                 RetrofitClient.api.revokeShare(shareId)
                     .enqueue(object : Callback<ApiResponse> {
                         override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                            android.util.Log.d("ProfileScreen", "revoke response code: ${response.code()}")
+                            android.util.Log.d("ProfileScreen", "revoke response body: ${response.body()}")
+                            android.util.Log.d("ProfileScreen", "revoke response errorBody: ${response.errorBody()?.string()}")
                             if (response.isSuccessful) {
                                 val apiResponse = response.body()
+                                android.util.Log.d("ProfileScreen", "revoke apiResponse code: ${apiResponse?.code}, message: ${apiResponse?.message}")
                                 if (apiResponse?.code == 0) {
-                                    Toast.makeText(activity, "撤销成功", Toast.LENGTH_SHORT).show()
-                                    loadShares()
+                                    val revokeResponse = parseRevokeShareResponse(apiResponse.data)
+                                    if (revokeResponse != null) {
+                                        android.util.Log.d("ProfileScreen", "revokeResponse: $revokeResponse")
+                                        if (revokeResponse.alreadyRevoked) {
+                                            Toast.makeText(activity, "该分享已经是撤销状态", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(activity, "撤销成功", Toast.LENGTH_SHORT).show()
+                                            markShareAsRevoked(shareId)
+                                        }
+                                    } else {
+                                        Toast.makeText(activity, "撤销成功", Toast.LENGTH_SHORT).show()
+                                        markShareAsRevoked(shareId)
+                                    }
                                 } else {
                                     Toast.makeText(activity, "撤销失败：${apiResponse?.message}", Toast.LENGTH_SHORT).show()
                                 }
                             } else {
+                                android.util.Log.e("ProfileScreen", "revoke failed with HTTP code: ${response.code()}")
                                 Toast.makeText(activity, "撤销失败", Toast.LENGTH_SHORT).show()
                             }
                         }
 
                         override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                            Toast.makeText(activity, "网络错误", Toast.LENGTH_SHORT).show()
+                            android.util.Log.e("ProfileScreen", "revoke onFailure: ${t.message}", t)
+                            Toast.makeText(activity, "网络错误：${t.message}", Toast.LENGTH_SHORT).show()
                         }
                     })
             }
             .setNegativeButton("取消", null)
             .show()
+    }
+
+    private fun parseRevokeShareResponse(data: Any?): RevokeShareResponse? {
+        if (data == null) return null
+        return try {
+            val gson = Gson()
+            val json = gson.toJson(data)
+            android.util.Log.d("ProfileScreen", "parseRevokeShareResponse json: $json")
+            val type = object : TypeToken<RevokeShareResponse>() {}.type
+            gson.fromJson(json, type)
+        } catch (e: Exception) {
+            android.util.Log.e("ProfileScreen", "parseRevokeShareResponse error: ${e.message}", e)
+            null
+        }
+    }
+
+    private fun markShareAsRevoked(shareId: String) {
+        val updatedShares = shareList.map { share ->
+            if (share.id == shareId) {
+                android.util.Log.d("ProfileScreen", "markShareAsRevoked: updating share $shareId")
+                share.copy(status = "revoked", revoked = true, alreadyRevoked = true)
+            } else {
+                share
+            }
+        }
+        shareList = updatedShares
+        displayShares(updatedShares)
     }
 }
