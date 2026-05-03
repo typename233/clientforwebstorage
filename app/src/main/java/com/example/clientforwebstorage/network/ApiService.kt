@@ -1,9 +1,11 @@
 package com.example.clientforwebstorage.network
 import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.CreateFolderRequest
+import com.example.clientforwebstorage.network.models.CreateGroupRequest
 import com.example.clientforwebstorage.network.models.CreateShareRequest
 import com.example.clientforwebstorage.network.models.LoginRequest
 import com.example.clientforwebstorage.network.models.PurgeRecycleRequest
+import com.example.clientforwebstorage.network.models.RefreshTokenRequest
 import com.example.clientforwebstorage.network.models.RenameRequest
 import com.example.clientforwebstorage.network.models.RegisterRequest
 import com.example.clientforwebstorage.network.models.UploadCompleteRequest
@@ -27,6 +29,9 @@ interface ApiService {
 
     @POST("api/v1/auth/register")
     fun register(@Body request: RegisterRequest): Call<ApiResponse>
+
+    @POST("api/v1/auth/refresh")
+    fun refreshToken(@Body request: RefreshTokenRequest): Call<ApiResponse>
 
     @POST("api/v1/auth/verification/send")
     fun sendVerificationCode(
@@ -125,4 +130,14 @@ interface ApiService {
 
     @DELETE("api/v1/uploads/{uploadId}")
     fun cancelUpload(@Path("uploadId") uploadId: String): Call<ApiResponse>
+
+    @POST("api/v2/groups")
+    fun createGroup(@Body request: CreateGroupRequest): Call<ApiResponse>
+
+    @GET("api/v2/groups")
+    fun getGroups(
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?,
+        @Query("keyword") keyword: String?
+    ): Call<ApiResponse>
 }

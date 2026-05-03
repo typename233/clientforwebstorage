@@ -1,0 +1,811 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NetDisk API (Phase 2)",
+    "version": "2.0.0",
+    "description": "网盘项目二期新增接口定义（群组、成员、收藏标签、版本、通知、分享增强等），用于 Apifox/Swagger 导入。"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com",
+      "description": "Production"
+    },
+    {
+      "url": "https://staging-api.example.com",
+      "description": "Staging"
+    }
+  ],
+  "tags": [
+    { "name": "Group" },
+    { "name": "GroupMember" },
+    { "name": "GroupInvite" },
+    { "name": "GroupJoinRequest" },
+    { "name": "Favorite" },
+    { "name": "Tag" },
+    { "name": "Version" },
+    { "name": "PreviewJob" },
+    { "name": "ShareV2" },
+    { "name": "Notification" },
+    { "name": "PublicGroup" }
+  ],
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/api/v2/groups": {
+      "post": {
+        "tags": ["Group"],
+        "summary": "创建群组",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGroupRequest" }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "get": {
+        "tags": ["Group"],
+        "summary": "我的群组列表",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" },
+          { "$ref": "#/components/parameters/KeywordQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}": {
+      "get": {
+        "tags": ["Group"],
+        "summary": "群组详情",
+        "parameters": [{ "$ref": "#/components/parameters/GroupId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "patch": {
+        "tags": ["Group"],
+        "summary": "更新群组信息",
+        "parameters": [{ "$ref": "#/components/parameters/GroupId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateGroupRequest" }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "delete": {
+        "tags": ["Group"],
+        "summary": "解散群组",
+        "parameters": [{ "$ref": "#/components/parameters/GroupId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/archive": {
+      "post": {
+        "tags": ["Group"],
+        "summary": "归档群组",
+        "parameters": [{ "$ref": "#/components/parameters/GroupId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/members": {
+      "get": {
+        "tags": ["GroupMember"],
+        "summary": "群成员列表",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" },
+          { "$ref": "#/components/parameters/KeywordQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/members/{userId}": {
+      "patch": {
+        "tags": ["GroupMember"],
+        "summary": "修改成员角色",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/UserId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["role"],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": ["owner", "editor", "viewer"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "delete": {
+        "tags": ["GroupMember"],
+        "summary": "移除成员",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/UserId" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/invites": {
+      "post": {
+        "tags": ["GroupInvite"],
+        "summary": "邀请成员",
+        "parameters": [{ "$ref": "#/components/parameters/GroupId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGroupInviteRequest" }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "get": {
+        "tags": ["GroupInvite"],
+        "summary": "邀请列表",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "accepted", "rejected", "expired", "cancelled"]
+            }
+          }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/invites/{inviteId}/cancel": {
+      "post": {
+        "tags": ["GroupInvite"],
+        "summary": "取消邀请",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/InviteId" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/group-invites/{inviteToken}/accept": {
+      "post": {
+        "tags": ["GroupInvite"],
+        "summary": "接受邀请",
+        "parameters": [{ "$ref": "#/components/parameters/InviteToken" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/group-invites/{inviteToken}/reject": {
+      "post": {
+        "tags": ["GroupInvite"],
+        "summary": "拒绝邀请",
+        "parameters": [{ "$ref": "#/components/parameters/InviteToken" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/join-requests": {
+      "post": {
+        "tags": ["GroupJoinRequest"],
+        "summary": "提交入群申请",
+        "parameters": [{ "$ref": "#/components/parameters/GroupId" }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": { "type": "string", "maxLength": 512 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "get": {
+        "tags": ["GroupJoinRequest"],
+        "summary": "群组申请列表（管理员）",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "approved", "rejected", "cancelled"]
+            }
+          }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/me/group-join-requests": {
+      "get": {
+        "tags": ["GroupJoinRequest"],
+        "summary": "我的入群申请列表",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/join-requests/{requestId}/approve": {
+      "post": {
+        "tags": ["GroupJoinRequest"],
+        "summary": "审批通过入群申请",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/RequestId" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/groups/{groupId}/join-requests/{requestId}/reject": {
+      "post": {
+        "tags": ["GroupJoinRequest"],
+        "summary": "拒绝入群申请",
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/RequestId" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/favorite": {
+      "post": {
+        "tags": ["Favorite"],
+        "summary": "收藏资源",
+        "parameters": [{ "$ref": "#/components/parameters/ResourceId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "delete": {
+        "tags": ["Favorite"],
+        "summary": "取消收藏资源",
+        "parameters": [{ "$ref": "#/components/parameters/ResourceId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/me/favorites": {
+      "get": {
+        "tags": ["Favorite"],
+        "summary": "我的收藏列表",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/tags": {
+      "post": {
+        "tags": ["Tag"],
+        "summary": "创建标签",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "maxLength": 64 },
+                  "color": { "type": "string", "maxLength": 16 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "get": {
+        "tags": ["Tag"],
+        "summary": "标签列表",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/tags/{tagId}": {
+      "patch": {
+        "tags": ["Tag"],
+        "summary": "更新标签",
+        "parameters": [{ "$ref": "#/components/parameters/TagId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "maxLength": 64 },
+                  "color": { "type": "string", "maxLength": 16 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "delete": {
+        "tags": ["Tag"],
+        "summary": "删除标签",
+        "parameters": [{ "$ref": "#/components/parameters/TagId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/tags": {
+      "get": {
+        "tags": ["Tag"],
+        "summary": "资源标签列表",
+        "parameters": [{ "$ref": "#/components/parameters/ResourceId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/tags/{tagId}": {
+      "post": {
+        "tags": ["Tag"],
+        "summary": "为资源添加标签",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceId" },
+          { "$ref": "#/components/parameters/TagId" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "delete": {
+        "tags": ["Tag"],
+        "summary": "移除资源标签",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceId" },
+          { "$ref": "#/components/parameters/TagId" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/versions": {
+      "get": {
+        "tags": ["Version"],
+        "summary": "文件历史版本列表",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceId" },
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/versions/init": {
+      "post": {
+        "tags": ["Version"],
+        "summary": "初始化版本上传",
+        "parameters": [{ "$ref": "#/components/parameters/ResourceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["filename", "totalSize", "totalParts"],
+                "properties": {
+                  "filename": { "type": "string" },
+                  "totalSize": { "type": "integer", "format": "int64" },
+                  "totalParts": { "type": "integer" },
+                  "sha256": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/versions/{uploadId}/parts/{partNumber}": {
+      "put": {
+        "tags": ["Version"],
+        "summary": "上传版本分片（二进制）",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceId" },
+          { "$ref": "#/components/parameters/UploadId" },
+          { "$ref": "#/components/parameters/PartNumber" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": { "type": "string", "format": "binary" }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/versions/{uploadId}/complete": {
+      "post": {
+        "tags": ["Version"],
+        "summary": "完成版本上传",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceId" },
+          { "$ref": "#/components/parameters/UploadId" }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "changeSummary": { "type": "string", "maxLength": 255 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/versions/{versionNo}/restore": {
+      "post": {
+        "tags": ["Version"],
+        "summary": "回滚到指定版本",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceId" },
+          { "$ref": "#/components/parameters/VersionNo" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/versions/{versionNo}/download-url": {
+      "get": {
+        "tags": ["Version"],
+        "summary": "获取指定版本下载地址",
+        "parameters": [
+          { "$ref": "#/components/parameters/ResourceId" },
+          { "$ref": "#/components/parameters/VersionNo" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/resources/{resourceId}/preview-jobs": {
+      "post": {
+        "tags": ["PreviewJob"],
+        "summary": "创建预览/转码任务",
+        "parameters": [{ "$ref": "#/components/parameters/ResourceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["jobType"],
+                "properties": {
+                  "jobType": {
+                    "type": "string",
+                    "enum": ["thumbnail", "pdf", "video_transcode"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/preview-jobs/{jobId}": {
+      "get": {
+        "tags": ["PreviewJob"],
+        "summary": "预览任务详情",
+        "parameters": [{ "$ref": "#/components/parameters/JobId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/preview-jobs": {
+      "get": {
+        "tags": ["PreviewJob"],
+        "summary": "预览任务列表",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "running", "success", "failed"]
+            }
+          },
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/shares/{shareId}": {
+      "patch": {
+        "tags": ["ShareV2"],
+        "summary": "更新分享策略",
+        "parameters": [{ "$ref": "#/components/parameters/ShareId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "allowPreview": { "type": "boolean" },
+                  "allowDownload": { "type": "boolean" },
+                  "needLogin": { "type": "boolean" },
+                  "allowSaveToMine": { "type": "boolean" },
+                  "maxAccessCount": { "type": "integer" },
+                  "expiredAt": { "type": "string", "format": "date-time" },
+                  "accessScope": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/shares/{shareId}/access-logs": {
+      "get": {
+        "tags": ["ShareV2"],
+        "summary": "分享访问日志",
+        "parameters": [
+          { "$ref": "#/components/parameters/ShareId" },
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/shares/{shareId}/stats": {
+      "get": {
+        "tags": ["ShareV2"],
+        "summary": "分享统计",
+        "parameters": [{ "$ref": "#/components/parameters/ShareId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/notifications": {
+      "get": {
+        "tags": ["Notification"],
+        "summary": "通知列表",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" },
+          {
+            "name": "unreadOnly",
+            "in": "query",
+            "schema": { "type": "boolean", "default": false }
+          }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/notifications/{notificationId}/read": {
+      "post": {
+        "tags": ["Notification"],
+        "summary": "标记通知已读",
+        "parameters": [{ "$ref": "#/components/parameters/NotificationId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/notifications/read-all": {
+      "post": {
+        "tags": ["Notification"],
+        "summary": "全部标记已读",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/notifications/{notificationId}": {
+      "delete": {
+        "tags": ["Notification"],
+        "summary": "删除通知",
+        "parameters": [{ "$ref": "#/components/parameters/NotificationId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/public/groups/{groupId}": {
+      "get": {
+        "tags": ["PublicGroup"],
+        "summary": "公开群组元信息",
+        "security": [],
+        "parameters": [{ "$ref": "#/components/parameters/GroupId" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/v2/public/groups/{groupId}/resources": {
+      "get": {
+        "tags": ["PublicGroup"],
+        "summary": "公开群组资源列表",
+        "security": [],
+        "parameters": [
+          { "$ref": "#/components/parameters/GroupId" },
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" }
+        ],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "responses": {
+      "Ok": {
+        "description": "成功",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiResponse" }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "GroupId": {
+        "name": "groupId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "UserId": {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "InviteId": {
+        "name": "inviteId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "InviteToken": {
+        "name": "inviteToken",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "RequestId": {
+        "name": "requestId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "ResourceId": {
+        "name": "resourceId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "TagId": {
+        "name": "tagId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "UploadId": {
+        "name": "uploadId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "PartNumber": {
+        "name": "partNumber",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" }
+      },
+      "VersionNo": {
+        "name": "versionNo",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" }
+      },
+      "JobId": {
+        "name": "jobId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "ShareId": {
+        "name": "shareId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "NotificationId": {
+        "name": "notificationId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "PageQuery": {
+        "name": "page",
+        "in": "query",
+        "schema": { "type": "integer", "default": 1, "minimum": 1 }
+      },
+      "PageSizeQuery": {
+        "name": "pageSize",
+        "in": "query",
+        "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 200 }
+      },
+      "KeywordQuery": {
+        "name": "keyword",
+        "in": "query",
+        "schema": { "type": "string" }
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "example": 0 },
+          "message": { "type": "string", "example": "ok" },
+          "data": { "type": "object", "nullable": true },
+          "requestId": { "type": "string", "example": "req_xxx" }
+        }
+      },
+      "CreateGroupRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 128 },
+          "description": { "type": "string", "maxLength": 512 },
+          "visibility": {
+            "type": "string",
+            "enum": ["private", "public"],
+            "default": "private"
+          },
+          "quotaBytes": { "type": "integer", "format": "int64" }
+        }
+      },
+      "UpdateGroupRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 128 },
+          "description": { "type": "string", "maxLength": 512 },
+          "visibility": { "type": "string", "enum": ["private", "public"] },
+          "quotaBytes": { "type": "integer", "format": "int64" },
+          "maxMembers": { "type": "integer", "minimum": 1 },
+          "avatarUrl": { "type": "string" }
+        }
+      },
+      "CreateGroupInviteRequest": {
+        "type": "object",
+        "required": ["role"],
+        "properties": {
+          "inviteeUserId": { "type": "string" },
+          "inviteeEmail": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["editor", "viewer"] },
+          "expireHours": { "type": "integer", "default": 72, "minimum": 1 }
+        }
+      }
+    }
+  }
+}

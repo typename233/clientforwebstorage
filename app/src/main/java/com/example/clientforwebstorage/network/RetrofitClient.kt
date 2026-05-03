@@ -4,6 +4,7 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.atomic.AtomicInteger
 
 object RetrofitClient {
     private const val BASE_URL = "http://115.29.173.36:8081/"
@@ -21,8 +22,33 @@ object RetrofitClient {
         chain.proceed(request)
     }
 
+    private val retryCount = AtomicInteger(0)
+
+    private val tokenRefreshInterceptor = Interceptor { chain ->
+        val response = chain.proceed(chain.request())
+        if (response.code == 401 && retryCount.getAndIncrement() == 0) {
+            response.close()
+            return@Interceptor try {
+                val refreshed = TokenManager.refreshToken()
+                if (refreshed) {
+                    val newToken = TokenManager.getAccessToken() ?: ""
+                    val newRequest = chain.request().newBuilder()
+                        .header("Authorization", "Bearer $newToken")
+                        .build()
+                    chain.proceed(newRequest)
+                } else {
+                    response
+                }
+            } finally {
+                retryCount.set(0)
+            }
+        }
+        response
+    }
+
     val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
+        .addInterceptor(tokenRefreshInterceptor)
         .build()
 
     val api: ApiService by lazy {

@@ -6,28 +6,31 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.clientforwebstorage.network.TokenManager
-import com.example.clientforwebstorage.ui.LoginScreen
-import com.example.clientforwebstorage.ui.MainScreen
-import com.example.clientforwebstorage.ui.RegisterScreen
+import com.example.clientforwebstorage.ui.agent.AgentFragment
+import com.example.clientforwebstorage.ui.files.FilesFragment
+import com.example.clientforwebstorage.ui.groups.GroupsFragment
+import com.example.clientforwebstorage.ui.profile.ProfileFragment
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
-    private var mainScreen: MainScreen? = null
-    private var onFilesPickedCallback: ((List<Uri>) -> Unit)? = null
+    private var currentFilesFragment: FilesFragment? = null
+    private var currentProfileFragment: ProfileFragment? = null
     private var onBackPressedCallback: OnBackPressedCallback? = null
-    private var exitConfirmTime: Long = 0
 
     private val pickFilesLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
-        onFilesPickedCallback?.invoke(uris)
-        mainScreen?.onFilesPicked(uris)
+        currentFilesFragment?.let { frag ->
+            uris.forEach { uri -> frag.handleUpload(uri) }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         TokenManager.init(this)
+        setContentView(R.layout.activity_main)
 
         if (TokenManager.isLoggedIn()) {
             showMain()
@@ -36,9 +39,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (TokenManager.isLoggedIn()) {
+            Thread { TokenManager.refreshToken() }.start()
+            TokenManager.startPeriodicRefresh()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        TokenManager.stopPeriodicRefresh()
+    }
+
     private fun showLogin() {
-        mainScreen = null
-        val screen = LoginScreen(this,
+        val screen = com.example.clientforwebstorage.ui.LoginScreen(this,
             onSwitchToRegister = { showRegister() },
             onLoginSuccess = { showMain() }
         )
@@ -46,37 +61,57 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showRegister() {
-        mainScreen = null
-        val screen = RegisterScreen(this) {
-            showLogin()
-        }
+        val screen = com.example.clientforwebstorage.ui.RegisterScreen(this) { showLogin() }
         setContentView(screen.createView())
     }
 
     private fun showMain() {
-        val screen = MainScreen(this,
-            onLogout = { showLogin() },
-            requestPickFiles = {
-                pickFilesLauncher.launch(arrayOf("*/*"))
+        setContentView(R.layout.activity_main)
+
+        currentFilesFragment = FilesFragment().apply {
+            setRequestPickFiles { pickFilesLauncher.launch(arrayOf("*/*")) }
+        }
+        currentProfileFragment = ProfileFragment().apply {
+            setLogoutCallback { showLogin() }
+        }
+
+        switchFragment(currentFilesFragment!!)
+
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
+        bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_files -> switchFragment(currentFilesFragment!!)
+                R.id.nav_groups -> switchFragment(GroupsFragment())
+                R.id.nav_agent -> switchFragment(AgentFragment().apply {
+                    setNavigationCallbacks(
+                        onFiles = { bottomNav.selectedItemId = R.id.nav_files },
+                        onUpload = {
+                            bottomNav.selectedItemId = R.id.nav_files
+                            pickFilesLauncher.launch(arrayOf("*/*"))
+                        }
+                    )
+                })
+                R.id.nav_profile -> switchFragment(currentProfileFragment!!)
             }
-        )
-        mainScreen = screen
-        setContentView(screen.createView())
-        
+            true
+        }
+
+        setupBackHandler()
+    }
+
+    private fun switchFragment(fragment: androidx.fragment.app.Fragment) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .commit()
+    }
+
+    private fun setupBackHandler() {
         onBackPressedCallback?.remove()
         onBackPressedCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (screen.handleBackPressed()) {
-                    exitConfirmTime = 0
-                } else {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - exitConfirmTime > 2000) {
-                        exitConfirmTime = currentTime
-                        android.widget.Toast.makeText(this@MainActivity, "再按一次退出应用", android.widget.Toast.LENGTH_SHORT).show()
-                    } else {
-                        finish()
-                    }
-                }
+                val currentFrag = supportFragmentManager.findFragmentById(R.id.fragment_container)
+                if (currentFrag is FilesFragment && currentFrag.handleBack()) return@handleOnBackPressed
+                finish()
             }
         }
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback!!)
