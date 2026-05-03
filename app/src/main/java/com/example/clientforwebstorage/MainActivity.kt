@@ -2,6 +2,7 @@ package com.example.clientforwebstorage
 
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -17,6 +18,7 @@ class MainActivity : AppCompatActivity() {
     private var currentFilesFragment: FilesFragment? = null
     private var currentProfileFragment: ProfileFragment? = null
     private var onBackPressedCallback: OnBackPressedCallback? = null
+    private lateinit var bottomNav: BottomNavigationView
 
     private val pickFilesLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -68,16 +70,7 @@ class MainActivity : AppCompatActivity() {
     private fun showMain() {
         setContentView(R.layout.activity_main)
 
-        currentFilesFragment = FilesFragment().apply {
-            setRequestPickFiles { pickFilesLauncher.launch(arrayOf("*/*")) }
-        }
-        currentProfileFragment = ProfileFragment().apply {
-            setLogoutCallback { showLogin() }
-        }
-
-        switchFragment(currentFilesFragment!!)
-
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
+        bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_files -> switchFragment(currentFilesFragment!!)
@@ -96,6 +89,19 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
+        currentFilesFragment = FilesFragment().apply {
+            setRequestPickFiles { pickFilesLauncher.launch(arrayOf("*/*")) }
+        }
+        currentProfileFragment = ProfileFragment().apply {
+            setLogoutCallback { showLogin() }
+        }
+
+        switchFragment(currentFilesFragment!!)
+
+        supportFragmentManager.addOnBackStackChangedListener {
+            updateBottomNavigationVisibility()
+        }
+
         setupBackHandler()
     }
 
@@ -103,6 +109,21 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
             .commit()
+        supportFragmentManager.executePendingTransactions()
+        updateBottomNavigationVisibility()
+    }
+
+    private fun updateBottomNavigationVisibility() {
+        if (!::bottomNav.isInitialized) return
+
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        if (currentFragment is com.example.clientforwebstorage.ui.profile.RecycleBinFragment ||
+            currentFragment is com.example.clientforwebstorage.ui.profile.SharesFragment ||
+            currentFragment is com.example.clientforwebstorage.ui.profile.ActivitiesFragment) {
+            bottomNav.visibility = View.GONE
+        } else {
+            bottomNav.visibility = View.VISIBLE
+        }
     }
 
     private fun setupBackHandler() {
@@ -111,7 +132,11 @@ class MainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 val currentFrag = supportFragmentManager.findFragmentById(R.id.fragment_container)
                 if (currentFrag is FilesFragment && currentFrag.handleBack()) return@handleOnBackPressed
-                finish()
+                if (supportFragmentManager.backStackEntryCount > 0) {
+                    supportFragmentManager.popBackStack()
+                } else {
+                    finish()
+                }
             }
         }
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback!!)

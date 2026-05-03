@@ -65,9 +65,9 @@ class ProfileFragment : Fragment() {
             onLogout?.invoke()
         }
 
-        view.findViewById<View>(R.id.item_shares).setOnClickListener { showSharesDialog() }
-        view.findViewById<View>(R.id.item_activities).setOnClickListener { showActivitiesDialog() }
-        view.findViewById<View>(R.id.item_storage).setOnClickListener { showRecycleBinDialog() }
+        view.findViewById<View>(R.id.item_shares).setOnClickListener { navigateToShares() }
+        view.findViewById<View>(R.id.item_activities).setOnClickListener { navigateToActivities() }
+        view.findViewById<View>(R.id.item_storage).setOnClickListener { navigateToRecycleBin() }
 
         view.findViewById<View>(R.id.item_favorites)?.setOnClickListener {
             Toast.makeText(requireContext(), "收藏夹", Toast.LENGTH_SHORT).show()
@@ -185,6 +185,30 @@ class ProfileFragment : Fragment() {
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+
+    private fun navigateToShares() {
+        val sharesFragment = SharesFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, sharesFragment)
+            .addToBackStack("shares")
+            .commit()
+    }
+
+    private fun navigateToActivities() {
+        val activitiesFragment = ActivitiesFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, activitiesFragment)
+            .addToBackStack("activities")
+            .commit()
+    }
+
+    private fun navigateToRecycleBin() {
+        val recycleBinFragment = RecycleBinFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, recycleBinFragment)
+            .addToBackStack("recycle_bin")
+            .commit()
     }
 
     private fun showRecycleBinDialog() {

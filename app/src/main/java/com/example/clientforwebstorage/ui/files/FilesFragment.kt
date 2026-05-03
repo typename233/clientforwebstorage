@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -24,6 +25,8 @@ import com.example.clientforwebstorage.network.models.Resource
 import com.example.clientforwebstorage.network.models.ResourceListData
 import com.example.clientforwebstorage.ui.PreviewActivity
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -138,6 +141,13 @@ class FilesFragment : Fragment() {
         }
 
         dialog.setContentView(sheetView)
+        dialog.setOnShowListener {
+            val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            bottomSheet?.let {
+                val behavior = BottomSheetBehavior.from(it)
+                behavior.peekHeight = (resources.displayMetrics.heightPixels * 0.5).toInt()
+            }
+        }
         dialog.show()
     }
 
@@ -206,6 +216,13 @@ class FilesFragment : Fragment() {
         }
 
         dialog.setContentView(sheetView)
+        dialog.setOnShowListener {
+            val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            bottomSheet?.let {
+                val behavior = BottomSheetBehavior.from(it)
+                behavior.peekHeight = (resources.displayMetrics.heightPixels * 0.5).toInt()
+            }
+        }
         dialog.show()
     }
 
@@ -293,21 +310,91 @@ class FilesFragment : Fragment() {
     }
 
     private fun shareResource(item: FileItem) {
+        val dialog = BottomSheetDialog(requireContext())
+        val sheetView = layoutInflater.inflate(R.layout.dialog_share, null)
+
+        sheetView.findViewById<TextView>(R.id.tv_file_name).text = item.name
+
+        val switchNeedCode = sheetView.findViewById<Switch>(R.id.switch_need_code)
+        val layoutCodeInput = sheetView.findViewById<View>(R.id.layout_code_input)
+        val etShareCode = sheetView.findViewById<EditText>(R.id.et_share_code)
+        val switchAllowPreview = sheetView.findViewById<Switch>(R.id.switch_allow_preview)
+        val switchAllowDownload = sheetView.findViewById<Switch>(R.id.switch_allow_download)
+
+        switchNeedCode.setOnCheckedChangeListener { _, isChecked ->
+            layoutCodeInput.visibility = if (isChecked) View.VISIBLE else View.GONE
+            if (isChecked) {
+                etShareCode.requestFocus()
+            }
+        }
+
+        sheetView.findViewById<View>(R.id.btn_cancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        sheetView.findViewById<View>(R.id.btn_create_share).setOnClickListener {
+            val needCode = switchNeedCode.isChecked
+            var code: String? = etShareCode.text?.toString()?.trim()
+
+            if (needCode && code.isNullOrBlank()) {
+                code = null
+            } else if (needCode && code != null) {
+                if (!code.matches(Regex("^[a-zA-Z0-9]{4,6}$"))) {
+                    Toast.makeText(requireContext(), "提取码为 4-6 位字母或数字", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+
+            dialog.dismiss()
+
+            createShareWithSettings(
+                item = item,
+                needCode = needCode,
+                code = code,
+                allowPreview = switchAllowPreview.isChecked,
+                allowDownload = switchAllowDownload.isChecked
+            )
+        }
+
+        dialog.setContentView(sheetView)
+        dialog.setOnShowListener {
+            val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            bottomSheet?.let {
+                val behavior = BottomSheetBehavior.from(it)
+                behavior.peekHeight = (resources.displayMetrics.heightPixels * 0.5).toInt()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun createShareWithSettings(
+        item: FileItem,
+        needCode: Boolean,
+        code: String?,
+        allowPreview: Boolean,
+        allowDownload: Boolean
+    ) {
         RetrofitClient.api.createShare(CreateShareRequest(
             resourceIds = listOf(item.id),
             expiredAt = null,
-            needCode = false,
-            code = null,
-            allowPreview = true,
-            allowDownload = false,
+            needCode = needCode,
+            code = code,
+            allowPreview = allowPreview,
+            allowDownload = allowDownload,
             maxAccessCount = null
         ))
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                     if (response.isSuccessful && response.body()?.code == 0) {
-                        val code = parseStringFromData(response.body()?.data, "shareCode")
+                        val shareCode = parseStringFromData(response.body()?.data, "shareCode")
                             ?: parseStringFromData(response.body()?.data, "code")
-                        Toast.makeText(requireContext(), "分享链接已生成: $code", Toast.LENGTH_LONG).show()
+
+                        showShareResultDialog(
+                            fileName = item.name,
+                            shareCode = shareCode ?: "未知",
+                            hasCode = needCode,
+                            userCode = code
+                        )
                     } else {
                         Toast.makeText(requireContext(), "分享失败: ${response.body()?.message}", Toast.LENGTH_SHORT).show()
                     }
@@ -316,6 +403,35 @@ class FilesFragment : Fragment() {
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
+    }
+
+    private fun showShareResultDialog(fileName: String, shareCode: String, hasCode: Boolean, userCode: String?) {
+        val message = StringBuilder()
+        message.appendLine("文件：$fileName")
+        message.appendLine()
+        message.appendLine("分享码：$shareCode")
+
+        if (hasCode) {
+            message.appendLine()
+            message.appendLine("提取码：${userCode ?: "（系统自动生成）"}")
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("✅ 分享成功")
+            .setMessage(message.toString())
+            .setPositiveButton("复制链接") { _, _ ->
+                val shareLink = "https://your-domain.com/s/$shareCode${if (hasCode && !userCode.isNullOrBlank()) "?code=$userCode" else ""}"
+                copyToClipboard(shareLink)
+            }
+            .setNegativeButton("关闭", null)
+            .show()
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("分享链接", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(requireContext(), "链接已复制到剪贴板", Toast.LENGTH_SHORT).show()
     }
 
     private fun parseStringFromData(data: Any?, key: String): String? {
