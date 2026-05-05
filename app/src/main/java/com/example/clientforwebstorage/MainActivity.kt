@@ -119,7 +119,8 @@ class MainActivity : AppCompatActivity() {
         val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
         if (currentFragment is com.example.clientforwebstorage.ui.profile.RecycleBinFragment ||
             currentFragment is com.example.clientforwebstorage.ui.profile.SharesFragment ||
-            currentFragment is com.example.clientforwebstorage.ui.profile.ActivitiesFragment) {
+            currentFragment is com.example.clientforwebstorage.ui.profile.ActivitiesFragment ||
+            currentFragment is com.example.clientforwebstorage.ui.groups.ChatFragment) {
             bottomNav.visibility = View.GONE
         } else {
             bottomNav.visibility = View.VISIBLE

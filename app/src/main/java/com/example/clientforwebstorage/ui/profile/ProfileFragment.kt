@@ -70,8 +70,13 @@ class ProfileFragment : Fragment() {
         view.findViewById<View>(R.id.item_storage).setOnClickListener { navigateToRecycleBin() }
 
         view.findViewById<View>(R.id.item_favorites)?.setOnClickListener {
-            Toast.makeText(requireContext(), "收藏夹", Toast.LENGTH_SHORT).show()
+            navigateToFavorites()
         }
+        
+        view.findViewById<View>(R.id.item_notifications)?.setOnClickListener {
+            navigateToNotifications()
+        }
+        
         view.findViewById<View>(R.id.item_privacy)?.setOnClickListener {
             Toast.makeText(requireContext(), "隐私与安全", Toast.LENGTH_SHORT).show()
         }
@@ -208,6 +213,22 @@ class ProfileFragment : Fragment() {
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, recycleBinFragment)
             .addToBackStack("recycle_bin")
+            .commit()
+    }
+
+    private fun navigateToFavorites() {
+        val favoritesFragment = FavoritesFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, favoritesFragment)
+            .addToBackStack("favorites")
+            .commit()
+    }
+
+    private fun navigateToNotifications() {
+        val notificationsFragment = NotificationsFragment()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, notificationsFragment)
+            .addToBackStack("notifications")
             .commit()
     }
 

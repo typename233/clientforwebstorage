@@ -53,7 +53,7 @@ class GroupsFragment : Fragment() {
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
         adapter = GroupListAdapter(groups) { item ->
-            Toast.makeText(requireContext(), "点击群组: ${item.name}", Toast.LENGTH_SHORT).show()
+            navigateToChat(item.id, item.name)
         }
         recycler.adapter = adapter
 
@@ -76,6 +76,14 @@ class GroupsFragment : Fragment() {
 
         dialog.setContentView(sheetView)
         dialog.show()
+    }
+
+    private fun navigateToChat(groupId: String, groupName: String) {
+        val chatFragment = ChatFragment.newInstance(groupId, groupName)
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, chatFragment)
+            .addToBackStack("chat")
+            .commit()
     }
 
     private fun createGroup(name: String) {
@@ -114,13 +122,15 @@ class GroupsFragment : Fragment() {
                         }
                         countView.text = "我的群组 (${groups.size})"
                         adapter = GroupListAdapter(groups) { item ->
-                            Toast.makeText(requireContext(), "点击群组: ${item.name}", Toast.LENGTH_SHORT).show()
+                            navigateToChat(item.id, item.name)
                         }
                         recycler.adapter = adapter
                     } else {
                         countView.text = "我的群组 (0)"
                         groups = emptyList()
-                        adapter = GroupListAdapter(emptyList())
+                        adapter = GroupListAdapter(emptyList()) { item ->
+                            navigateToChat(item.id, item.name)
+                        }
                         recycler.adapter = adapter
                     }
                 }

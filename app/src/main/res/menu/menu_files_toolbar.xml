@@ -1,15 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/action_search"
-        android:icon="@android:drawable/ic_menu_search"
+        android:id="@+id/action_sort"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
         android:iconTint="@android:color/white"
         android:showAsAction="ifRoom"
-        android:title="搜索" />
+        android:title="排序方式">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/sort_name_asc"
+                    android:title="名称 A-Z"
+                    app:showAsAction="never" />
+                <item
+                    android:id="@+id/sort_name_desc"
+                    android:title="名称 Z-A"
+                    app:showAsAction="never" />
+                <item
+                    android:id="@+id/sort_time_desc"
+                    android:title="时间 新→旧"
+                    android:checked="true"
+                    app:showAsAction="never" />
+                <item
+                    android:id="@+id/sort_time_asc"
+                    android:title="时间 旧→新"
+                    app:showAsAction="never" />
+                <item
+                    android:id="@+id/sort_size_desc"
+                    android:title="大小 大→小"
+                    app:showAsAction="never" />
+                <item
+                    android:id="@+id/sort_size_asc"
+                    android:title="大小 小→大"
+                    app:showAsAction="never" />
+            </group>
+        </menu>
+    </item>
     <item
-        android:id="@+id/action_more"
-        android:icon="@android:drawable/ic_menu_more"
+        android:id="@+id/action_refresh"
+        android:icon="@android:drawable/ic_menu_rotate"
         android:iconTint="@android:color/white"
         android:showAsAction="ifRoom"
-        android:title="更多" />
+        android:title="刷新" />
 </menu>

@@ -16,10 +16,24 @@
             android:layout_height="wrap_content"
             android:minHeight="56dp"
             android:background="@color/primary_blue"
-            android:title="我的文件"
             android:titleTextColor="@color/white"
             android:fitsSystemWindows="true"
-            app:menu="@menu/menu_files_toolbar" />
+            app:menu="@menu/menu_files_toolbar">
+
+            <HorizontalScrollView
+                android:id="@+id/path_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/path_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical" />
+            </HorizontalScrollView>
+        </com.google.android.material.appbar.MaterialToolbar>
 
         <HorizontalScrollView
             android:id="@+id/chip_scroll"

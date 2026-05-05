@@ -42,11 +42,17 @@ class FilesFragment : Fragment() {
     private val pathStack = mutableListOf<Pair<String?, String>>()
     private var currentResources: List<Resource> = emptyList()
     private var currentCategory: String = "全部"
+    private var currentSortType: SortType = SortType.TIME_DESC
     private lateinit var recycler: RecyclerView
     private lateinit var adapter: FileListAdapter
     private lateinit var categoryContainer: LinearLayout
     private lateinit var storageProgress: LinearProgressIndicator
+    private lateinit var pathContainer: LinearLayout
     private var requestPickFiles: (() -> Unit)? = null
+
+    enum class SortType {
+        NAME_ASC, NAME_DESC, TIME_DESC, TIME_ASC, SIZE_DESC, SIZE_ASC
+    }
 
     fun setRequestPickFiles(callback: () -> Unit) {
         requestPickFiles = callback
@@ -68,13 +74,52 @@ class FilesFragment : Fragment() {
         val fab = view.findViewById<FloatingActionButton>(R.id.fab_add)
         storageProgress = view.findViewById(R.id.storage_progress)
         categoryContainer = view.findViewById(R.id.chip_container)
+        pathContainer = view.findViewById(R.id.path_container)
 
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
-                R.id.action_search -> Toast.makeText(requireContext(), "搜索", Toast.LENGTH_SHORT).show()
-                R.id.action_more -> Toast.makeText(requireContext(), "更多", Toast.LENGTH_SHORT).show()
+                R.id.action_refresh -> {
+                    loadResources()
+                    true
+                }
+                R.id.sort_name_asc -> {
+                    currentSortType = SortType.NAME_ASC
+                    displayResources(currentResources)
+                    requireActivity().invalidateOptionsMenu()
+                    true
+                }
+                R.id.sort_name_desc -> {
+                    currentSortType = SortType.NAME_DESC
+                    displayResources(currentResources)
+                    requireActivity().invalidateOptionsMenu()
+                    true
+                }
+                R.id.sort_time_desc -> {
+                    currentSortType = SortType.TIME_DESC
+                    displayResources(currentResources)
+                    requireActivity().invalidateOptionsMenu()
+                    true
+                }
+                R.id.sort_time_asc -> {
+                    currentSortType = SortType.TIME_ASC
+                    displayResources(currentResources)
+                    requireActivity().invalidateOptionsMenu()
+                    true
+                }
+                R.id.sort_size_desc -> {
+                    currentSortType = SortType.SIZE_DESC
+                    displayResources(currentResources)
+                    requireActivity().invalidateOptionsMenu()
+                    true
+                }
+                R.id.sort_size_asc -> {
+                    currentSortType = SortType.SIZE_ASC
+                    displayResources(currentResources)
+                    requireActivity().invalidateOptionsMenu()
+                    true
+                }
+                else -> false
             }
-            true
         }
 
         setupCategoryChips()
@@ -89,6 +134,19 @@ class FilesFragment : Fragment() {
         fab.setOnClickListener { showActionBottomSheet() }
 
         loadResources()
+    }
+
+    override fun onPrepareOptionsMenu(menu: android.view.Menu) {
+        super.onPrepareOptionsMenu(menu)
+        val sortItem = menu.findItem(R.id.action_sort)?.subMenu
+        sortItem?.let {
+            it.findItem(R.id.sort_name_asc)?.isChecked = (currentSortType == SortType.NAME_ASC)
+            it.findItem(R.id.sort_name_desc)?.isChecked = (currentSortType == SortType.NAME_DESC)
+            it.findItem(R.id.sort_time_desc)?.isChecked = (currentSortType == SortType.TIME_DESC)
+            it.findItem(R.id.sort_time_asc)?.isChecked = (currentSortType == SortType.TIME_ASC)
+            it.findItem(R.id.sort_size_desc)?.isChecked = (currentSortType == SortType.SIZE_DESC)
+            it.findItem(R.id.sort_size_asc)?.isChecked = (currentSortType == SortType.SIZE_ASC)
+        }
     }
 
     private fun setupCategoryChips() {
@@ -443,7 +501,89 @@ class FilesFragment : Fragment() {
         } catch (_: Exception) { null }
     }
 
+    private fun spToPx(sp: Float): Float {
+        return sp * requireContext().resources.displayMetrics.scaledDensity
+    }
+
+    private fun updatePathDisplay() {
+        pathContainer.removeAllViews()
+
+        val rootItem = TextView(requireContext()).apply {
+            text = "📁"
+            textSize = 18f
+            setTextColor(0xFFFFFFFF.toInt())
+            isClickable = true
+            setPadding(0, dpToPx(4), 0, dpToPx(4))
+            setOnClickListener {
+                if (pathStack.isNotEmpty()) {
+                    while (pathStack.isNotEmpty()) {
+                        pathStack.removeAt(pathStack.size - 1)
+                    }
+                    currentParentId = null
+                    loadResources()
+                }
+            }
+        }
+        pathContainer.addView(rootItem)
+
+        pathStack.forEachIndexed { index, entry ->
+            val separator = TextView(requireContext()).apply {
+                text = " › "
+                textSize = 18f
+                setTextColor(0xB3FFFFFF.toInt())
+            }
+            pathContainer.addView(separator)
+
+            val pathItem = TextView(requireContext()).apply {
+                text = entry.second
+                textSize = 18f
+                if (index == pathStack.size - 1) {
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(0xFFFFFFFF.toInt())
+                    isClickable = false
+                } else {
+                    setTextColor(0xE0FFFFFF.toInt())
+                    isClickable = true
+                    setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+                    setOnClickListener {
+                        while (pathStack.size > index + 1) {
+                            pathStack.removeAt(pathStack.size - 1)
+                        }
+                        currentParentId = entry.first
+                        loadResources()
+                    }
+                }
+            }
+            pathContainer.addView(pathItem)
+        }
+
+        if (currentParentId != null && pathStack.isNotEmpty()) {
+            val separator = TextView(requireContext()).apply {
+                text = " › "
+                textSize = 18f
+                setTextColor(0xB3FFFFFF.toInt())
+            }
+            pathContainer.addView(separator)
+
+            val currentItem = TextView(requireContext()).apply {
+                text = "当前目录"
+                textSize = 18f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(0xFFFFFFFF.toInt())
+            }
+            pathContainer.addView(currentItem)
+        } else if (currentParentId == null && pathStack.isEmpty()) {
+            val rootLabel = TextView(requireContext()).apply {
+                text = " 根目录"
+                textSize = 18f
+                setTextColor(0x99FFFFFF.toInt())
+            }
+            pathContainer.addView(rootLabel)
+        }
+    }
+
     private fun loadResources() {
+        updatePathDisplay()
         RetrofitClient.api.getResources(currentParentId, null, 1, 50)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
@@ -477,12 +617,13 @@ class FilesFragment : Fragment() {
     private fun displayResources(resources: List<Resource>) {
         currentResources = resources
         val filtered = filterByCategory(resources)
+        val sorted = sortResources(filtered)
 
         val items = mutableListOf<FileItem>()
         if (currentParentId != null) {
             items.add(FileItem("..", ".. 返回上级", FileType.FOLDER, updatedAt = ""))
         }
-        filtered.forEach { res ->
+        sorted.forEach { res ->
             items.add(FileItem(res.id, res.name,
                 if (res.type == "folder") FileType.FOLDER else FileType.FILE,
                 res.size, res.extension, res.updatedAt ?: ""))
@@ -492,6 +633,29 @@ class FilesFragment : Fragment() {
             onItemLongClick = { item -> onFileItemLongClick(item) }
         )
         recycler.adapter = adapter
+    }
+
+    private fun sortResources(resources: List<Resource>): List<Resource> {
+        return when (currentSortType) {
+            SortType.NAME_ASC -> resources.sortedWith(
+                compareBy<Resource> { if (it.type != "folder") 1 else 0 }
+                    .thenBy { it.name?.lowercase() ?: "" })
+            SortType.NAME_DESC -> resources.sortedWith(
+                compareBy<Resource> { if (it.type != "folder") 1 else 0 }
+                    .thenByDescending { it.name?.lowercase() ?: "" })
+            SortType.TIME_DESC -> resources.sortedWith(
+                compareBy<Resource> { if (it.type != "folder") 1 else 0 }
+                    .thenByDescending { it.updatedAt ?: "" })
+            SortType.TIME_ASC -> resources.sortedWith(
+                compareBy<Resource> { if (it.type != "folder") 1 else 0 }
+                    .thenBy { it.updatedAt ?: "" })
+            SortType.SIZE_DESC -> resources.sortedWith(
+                compareBy<Resource> { if (it.type != "folder") 1 else 0 }
+                    .thenByDescending { it.size ?: 0L })
+            SortType.SIZE_ASC -> resources.sortedWith(
+                compareBy<Resource> { if (it.type != "folder") 1 else 0 }
+                    .thenBy { it.size ?: 0L })
+        }
     }
 
     private fun filterByCategory(resources: List<Resource>): List<Resource> {

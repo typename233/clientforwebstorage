@@ -31,6 +31,7 @@ class FileListAdapter(
         private val icon: ImageView = itemView.findViewById(R.id.iv_file_icon)
         private val name: TextView = itemView.findViewById(R.id.tv_file_name)
         private val meta: TextView = itemView.findViewById(R.id.tv_file_meta)
+        private val btnMore: View = itemView.findViewById(R.id.btn_more)
 
         fun bind(item: FileItem) {
             name.text = item.name
@@ -52,6 +53,7 @@ class FileListAdapter(
 
             itemView.setOnClickListener { onItemClick(item) }
             itemView.setOnLongClickListener { onItemLongClick(item) }
+            btnMore.setOnClickListener { onItemLongClick(item) }
         }
 
         private fun formatFileSize(size: Long): String {
