@@ -4,6 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -46,9 +49,17 @@ class GroupsFragment : Fragment() {
         recycler = view.findViewById(R.id.recycler_groups)
         val fab = view.findViewById<FloatingActionButton>(R.id.fab_add_group)
 
-        toolbar.setOnMenuItemClickListener {
-            Toast.makeText(requireContext(), it.title, Toast.LENGTH_SHORT).show()
-            true
+        toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_view_invites -> {
+                    navigateToInvites()
+                    true
+                }
+                else -> {
+                    Toast.makeText(requireContext(), menuItem.title, Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
         }
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
@@ -83,6 +94,14 @@ class GroupsFragment : Fragment() {
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, chatFragment)
             .addToBackStack("chat")
+            .commit()
+    }
+
+    private fun navigateToInvites() {
+        val invitesFragment = InvitesFragment.newInstance()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, invitesFragment)
+            .addToBackStack("invites")
             .commit()
     }
 

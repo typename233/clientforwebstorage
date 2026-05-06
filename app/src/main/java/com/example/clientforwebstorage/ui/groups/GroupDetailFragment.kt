@@ -4,15 +4,18 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.clientforwebstorage.R
 import com.example.clientforwebstorage.network.ApiService
 import com.example.clientforwebstorage.network.RetrofitClient
+import com.example.clientforwebstorage.network.models.CreateGroupInviteRequest
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -155,13 +158,73 @@ class GroupDetailFragment : Fragment() {
 
     private fun setupActionButtons(view: View) {
         view.findViewById<View>(R.id.btn_invite)?.setOnClickListener {
-            
-            Toast.makeText(requireContext(), "邀请成员功能开发中", Toast.LENGTH_SHORT).show()
+            showInviteMemberDialog()
         }
 
         view.findViewById<View>(R.id.btn_leave)?.setOnClickListener {
-            
             showLeaveGroupDialog()
+        }
+    }
+
+    private fun showInviteMemberDialog() {
+        val dialog = BottomSheetDialog(requireContext())
+        val sheetView = layoutInflater.inflate(R.layout.dialog_invite_member, null)
+
+        sheetView.findViewById<View>(R.id.btn_confirm_invite).setOnClickListener {
+            val emailInput = sheetView.findViewById<EditText>(R.id.et_invitee_email)
+            val roleGroup = sheetView.findViewById<RadioGroup>(R.id.rg_role)
+            val invitee = emailInput.text?.toString()?.trim().orEmpty()
+
+            if (invitee.isEmpty()) {
+                Toast.makeText(requireContext(), "请输入被邀请人邮箱或用户ID", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val selectedRoleId = roleGroup.checkedRadioButtonId
+            val role = when (selectedRoleId) {
+                R.id.rb_editor -> "editor"
+                R.id.rb_viewer -> "viewer"
+                else -> "viewer"
+            }
+
+            dialog.dismiss()
+            inviteMember(invitee, role)
+        }
+
+        dialog.setContentView(sheetView)
+        dialog.show()
+    }
+
+    private fun inviteMember(invitee: String, role: String) {
+        groupId?.let { id ->
+            val isEmail = invitee.contains("@")
+            val request = CreateGroupInviteRequest(
+                inviteeEmail = if (isEmail) invitee else null,
+                inviteeUserId = if (isEmail) null else invitee,
+                role = role
+            )
+
+            apiService.inviteMember(id, request).enqueue(object : Callback<com.example.clientforwebstorage.network.models.ApiResponse> {
+                override fun onResponse(
+                    call: Call<com.example.clientforwebstorage.network.models.ApiResponse>,
+                    response: Response<com.example.clientforwebstorage.network.models.ApiResponse>
+                ) {
+                    if (response.isSuccessful && response.body() != null) {
+                        val apiResponse = response.body()!!
+                        if (apiResponse.code == 0) {
+                            Toast.makeText(requireContext(), "邀请已发送", Toast.LENGTH_SHORT).show()
+                        } else {
+                            showError("邀请失败: ${apiResponse.message}")
+                        }
+                    } else {
+                        showError("网络请求失败")
+                    }
+                }
+
+                override fun onFailure(call: Call<com.example.clientforwebstorage.network.models.ApiResponse>, t: Throwable) {
+                    showError("网络错误: ${t.message}")
+                }
+            })
         }
     }
 

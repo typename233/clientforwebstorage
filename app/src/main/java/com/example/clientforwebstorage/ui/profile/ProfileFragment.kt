@@ -22,6 +22,7 @@ import com.example.clientforwebstorage.network.models.Share
 import com.example.clientforwebstorage.network.models.ShareListData
 import com.example.clientforwebstorage.network.models.UserActivity
 import com.example.clientforwebstorage.network.models.UserActivityListData
+import com.example.clientforwebstorage.utils.LanguageUtil
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -81,8 +82,34 @@ class ProfileFragment : Fragment() {
             Toast.makeText(requireContext(), "隐私与安全", Toast.LENGTH_SHORT).show()
         }
         view.findViewById<View>(R.id.item_language)?.setOnClickListener {
-            Toast.makeText(requireContext(), "语言设置", Toast.LENGTH_SHORT).show()
+            showLanguageDialog()
         }
+    }
+
+    private fun showLanguageDialog() {
+        val currentLang = LanguageUtil.getLanguageCode(requireContext())
+        val languages = arrayOf(getString(R.string.language_chinese), getString(R.string.language_english))
+        val checkedItem = if (currentLang == "en") 1 else 0
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.language_title)
+            .setSingleChoiceItems(languages, checkedItem) { dialog, which ->
+                val newLang = if (which == 0) "zh" else "en"
+                if (newLang != currentLang) {
+                    LanguageUtil.setLanguage(requireContext(), newLang)
+                    Toast.makeText(requireContext(), R.string.language_changed, Toast.LENGTH_LONG).show()
+                    activity?.let {
+                        val intent = it.packageManager.getLaunchIntentForPackage(it.packageName)
+                        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        it.startActivity(intent)
+                        it.finish()
+                        Runtime.getRuntime().exit(0)
+                    }
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showSharesDialog() {

@@ -6,10 +6,12 @@
     android:background="#F5F5F5"
     android:orientation="vertical">
 
-    <View
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="32dp"
-        android:background="@color/primary_blue" />
+        android:layout_height="20dp"
+        android:background="@color/primary_blue"
+        >
+    </LinearLayout>
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar_chat"
@@ -19,8 +21,23 @@
         app:navigationIcon="@android:drawable/ic_menu_revert"
         app:navigationIconTint="#FFFFFF"
         app:title="群组聊天"
-        app:titleTextColor="#FFFFFF"
-        app:menu="@menu/menu_chat_toolbar" />
+        app:titleTextColor="#FFFFFF">
+
+        <ImageButton
+            android:id="@+id/btn_chat_more"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:src="@android:drawable/ic_menu_more"
+            android:tint="#FFFFFF"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="群组详情"
+            android:padding="10dp" />
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="16dp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_messages"
@@ -29,7 +46,7 @@
         android:layout_weight="1"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:paddingTop="16dp"
+        android:paddingTop="4dp"
         android:paddingBottom="4dp"
         android:clipToPadding="false" />
 

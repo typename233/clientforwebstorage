@@ -4,11 +4,14 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -18,12 +21,16 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.clientforwebstorage.R
 import com.example.clientforwebstorage.network.RetrofitClient
 import com.example.clientforwebstorage.network.models.ApiResponse
+import com.example.clientforwebstorage.network.models.CompletedPart
 import com.example.clientforwebstorage.network.models.CreateFolderRequest
 import com.example.clientforwebstorage.network.models.CreateShareRequest
 import com.example.clientforwebstorage.network.models.RenameRequest
 import com.example.clientforwebstorage.network.models.Resource
 import com.example.clientforwebstorage.network.models.ResourceListData
+import com.example.clientforwebstorage.network.models.UploadCompleteRequest
+import com.example.clientforwebstorage.network.models.UploadInitRequest
 import com.example.clientforwebstorage.ui.PreviewActivity
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -49,6 +56,9 @@ class FilesFragment : Fragment() {
     private lateinit var storageProgress: LinearProgressIndicator
     private lateinit var pathContainer: LinearLayout
     private var requestPickFiles: (() -> Unit)? = null
+    private var uploadDialog: androidx.appcompat.app.AlertDialog? = null
+    private var uploadProgressIndicator: LinearProgressIndicator? = null
+    private var uploadProgressText: TextView? = null
 
     enum class SortType {
         NAME_ASC, NAME_DESC, TIME_DESC, TIME_ASC, SIZE_DESC, SIZE_ASC
@@ -76,51 +86,8 @@ class FilesFragment : Fragment() {
         categoryContainer = view.findViewById(R.id.chip_container)
         pathContainer = view.findViewById(R.id.path_container)
 
-        toolbar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_refresh -> {
-                    loadResources()
-                    true
-                }
-                R.id.sort_name_asc -> {
-                    currentSortType = SortType.NAME_ASC
-                    displayResources(currentResources)
-                    requireActivity().invalidateOptionsMenu()
-                    true
-                }
-                R.id.sort_name_desc -> {
-                    currentSortType = SortType.NAME_DESC
-                    displayResources(currentResources)
-                    requireActivity().invalidateOptionsMenu()
-                    true
-                }
-                R.id.sort_time_desc -> {
-                    currentSortType = SortType.TIME_DESC
-                    displayResources(currentResources)
-                    requireActivity().invalidateOptionsMenu()
-                    true
-                }
-                R.id.sort_time_asc -> {
-                    currentSortType = SortType.TIME_ASC
-                    displayResources(currentResources)
-                    requireActivity().invalidateOptionsMenu()
-                    true
-                }
-                R.id.sort_size_desc -> {
-                    currentSortType = SortType.SIZE_DESC
-                    displayResources(currentResources)
-                    requireActivity().invalidateOptionsMenu()
-                    true
-                }
-                R.id.sort_size_asc -> {
-                    currentSortType = SortType.SIZE_ASC
-                    displayResources(currentResources)
-                    requireActivity().invalidateOptionsMenu()
-                    true
-                }
-                else -> false
-            }
-        }
+        val btnMore = view.findViewById<ImageButton>(R.id.btn_more)
+        btnMore.setOnClickListener { showMoreMenu(it) }
 
         setupCategoryChips()
 
@@ -136,16 +103,62 @@ class FilesFragment : Fragment() {
         loadResources()
     }
 
-    override fun onPrepareOptionsMenu(menu: android.view.Menu) {
-        super.onPrepareOptionsMenu(menu)
-        val sortItem = menu.findItem(R.id.action_sort)?.subMenu
-        sortItem?.let {
-            it.findItem(R.id.sort_name_asc)?.isChecked = (currentSortType == SortType.NAME_ASC)
-            it.findItem(R.id.sort_name_desc)?.isChecked = (currentSortType == SortType.NAME_DESC)
-            it.findItem(R.id.sort_time_desc)?.isChecked = (currentSortType == SortType.TIME_DESC)
-            it.findItem(R.id.sort_time_asc)?.isChecked = (currentSortType == SortType.TIME_ASC)
-            it.findItem(R.id.sort_size_desc)?.isChecked = (currentSortType == SortType.SIZE_DESC)
-            it.findItem(R.id.sort_size_asc)?.isChecked = (currentSortType == SortType.SIZE_ASC)
+    private fun showMoreMenu(anchor: View) {
+        val popupView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.popup_files_menu, null)
+        
+        val popupWindow = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = 10f
+            setBackgroundDrawable(resources.getDrawable(android.R.color.white, null))
+            isOutsideTouchable = true
+            isFocusable = true
+        }
+        
+        popupView.findViewById<View>(R.id.menu_refresh)?.setOnClickListener {
+            loadResources()
+            popupWindow.dismiss()
+        }
+        
+        val sortOptions = mapOf(
+            R.id.sort_name_asc to SortType.NAME_ASC,
+            R.id.sort_name_desc to SortType.NAME_DESC,
+            R.id.sort_time_desc to SortType.TIME_DESC,
+            R.id.sort_time_asc to SortType.TIME_ASC,
+            R.id.sort_size_desc to SortType.SIZE_DESC,
+            R.id.sort_size_asc to SortType.SIZE_ASC
+        )
+        
+        sortOptions.forEach { (id, sortType) ->
+            popupView.findViewById<View>(id)?.setOnClickListener {
+                currentSortType = sortType
+                displayResources(currentResources)
+                updateSortMenuUI(popupView)
+            }
+        }
+        
+        updateSortMenuUI(popupView)
+        
+        popupWindow.showAsDropDown(anchor, -dpToPx(120), 0)
+    }
+    
+    private fun updateSortMenuUI(popupView: View) {
+        val sortTypes = mapOf(
+            R.id.sort_name_asc to SortType.NAME_ASC,
+            R.id.sort_name_desc to SortType.NAME_DESC,
+            R.id.sort_time_desc to SortType.TIME_DESC,
+            R.id.sort_time_asc to SortType.TIME_ASC,
+            R.id.sort_size_desc to SortType.SIZE_DESC,
+            R.id.sort_size_asc to SortType.SIZE_ASC
+        )
+        
+        sortTypes.forEach { (id, sortType) ->
+            val itemView = popupView.findViewById<TextView>(id)
+            itemView?.alpha = if (currentSortType == sortType) 1.0f else 0.6f
         }
     }
 
@@ -508,12 +521,23 @@ class FilesFragment : Fragment() {
     private fun updatePathDisplay() {
         pathContainer.removeAllViews()
 
+        val pathRow = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
         val rootItem = TextView(requireContext()).apply {
             text = "📁"
-            textSize = 18f
+            textSize = 16f
             setTextColor(0xFFFFFFFF.toInt())
             isClickable = true
-            setPadding(0, dpToPx(4), 0, dpToPx(4))
+            isFocusable = true
+            setPadding(0, dpToPx(4), dpToPx(4), dpToPx(4))
+            setBackgroundResource(android.R.drawable.list_selector_background)
             setOnClickListener {
                 if (pathStack.isNotEmpty()) {
                     while (pathStack.isNotEmpty()) {
@@ -524,27 +548,31 @@ class FilesFragment : Fragment() {
                 }
             }
         }
-        pathContainer.addView(rootItem)
+        pathRow.addView(rootItem)
 
         pathStack.forEachIndexed { index, entry ->
             val separator = TextView(requireContext()).apply {
                 text = " › "
-                textSize = 18f
+                textSize = 16f
                 setTextColor(0xB3FFFFFF.toInt())
             }
-            pathContainer.addView(separator)
+            pathRow.addView(separator)
 
             val pathItem = TextView(requireContext()).apply {
                 text = entry.second
-                textSize = 18f
+                textSize = 16f
+                maxLines = Int.MAX_VALUE
                 if (index == pathStack.size - 1) {
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(0xFFFFFFFF.toInt())
                     isClickable = false
+                    isFocusable = false
                 } else {
                     setTextColor(0xE0FFFFFF.toInt())
                     isClickable = true
+                    isFocusable = true
                     setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+                    setBackgroundResource(android.R.drawable.list_selector_background)
                     setOnClickListener {
                         while (pathStack.size > index + 1) {
                             pathStack.removeAt(pathStack.size - 1)
@@ -554,31 +582,18 @@ class FilesFragment : Fragment() {
                     }
                 }
             }
-            pathContainer.addView(pathItem)
+            pathRow.addView(pathItem)
         }
 
-        if (currentParentId != null && pathStack.isNotEmpty()) {
-            val separator = TextView(requireContext()).apply {
-                text = " › "
-                textSize = 18f
-                setTextColor(0xB3FFFFFF.toInt())
-            }
-            pathContainer.addView(separator)
+        pathContainer.addView(pathRow)
 
-            val currentItem = TextView(requireContext()).apply {
-                text = "当前目录"
-                textSize = 18f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(0xFFFFFFFF.toInt())
-            }
-            pathContainer.addView(currentItem)
-        } else if (currentParentId == null && pathStack.isEmpty()) {
+        if (currentParentId == null && pathStack.isEmpty()) {
             val rootLabel = TextView(requireContext()).apply {
                 text = " 根目录"
-                textSize = 18f
+                textSize = 16f
                 setTextColor(0x99FFFFFF.toInt())
             }
-            pathContainer.addView(rootLabel)
+            pathRow.addView(rootLabel)
         }
     }
 
@@ -711,8 +726,222 @@ class FilesFragment : Fragment() {
         return false
     }
 
+    private val PART_SIZE = 5 * 1024 * 1024L // 5MB per part
+
     fun handleUpload(uri: Uri) {
-        Toast.makeText(requireContext(), "上传文件: ${getFileName(uri)}", Toast.LENGTH_SHORT).show()
+        val fileName = getFileName(uri)
+        val fileSize = getFileSize(uri)
+
+        if (fileSize <= 0) {
+            Toast.makeText(requireContext(), "无法获取文件大小", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        showUploadDialog(fileName)
+        uploadFile(uri, fileName, fileSize)
+    }
+
+    private fun getFileSize(uri: Uri): Long {
+        var size: Long = 0
+        requireContext().contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val idx = cursor.getColumnIndex(OpenableColumns.SIZE)
+            if (cursor.moveToFirst() && idx >= 0) size = cursor.getLong(idx)
+        }
+        return size
+    }
+
+    private fun showUploadDialog(fileName: String) {
+        val layout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(24), dpToPx(20), dpToPx(24), dpToPx(20))
+
+            addView(TextView(requireContext()).apply {
+                text = "正在上传: $fileName"
+                textSize = 16f
+                setPadding(0, 0, 0, dpToPx(16))
+            })
+
+            uploadProgressIndicator = LinearProgressIndicator(requireContext()).apply {
+                isIndeterminate = false
+                progress = 0
+            }
+            addView(uploadProgressIndicator!!)
+
+            uploadProgressText = TextView(requireContext()).apply {
+                text = "准备上传..."
+                textSize = 12f
+                setPadding(0, dpToPx(8), 0, 0)
+            }
+            addView(uploadProgressText!!)
+        }
+
+        uploadDialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("文件上传")
+            .setView(layout)
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun updateProgress(progress: Int, message: String) {
+        activity?.runOnUiThread {
+            uploadProgressIndicator?.progress = progress
+            uploadProgressText?.text = message
+        }
+    }
+
+    private fun dismissUploadDialog() {
+        activity?.runOnUiThread {
+            uploadDialog?.dismiss()
+            uploadDialog = null
+        }
+    }
+
+    private fun uploadFile(uri: Uri, fileName: String, fileSize: Long) {
+        val request = UploadInitRequest(
+            parentId = currentParentId,
+            filename = fileName,
+            size = fileSize,
+            sha256 = null,
+            partSize = PART_SIZE
+        )
+
+        RetrofitClient.api.initUpload(request).enqueue(object : Callback<ApiResponse> {
+            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                if (response.isSuccessful && response.body()?.code == 0) {
+                    val data = response.body()?.data
+                    val uploadId = parseStringFromData(data, "uploadId")
+                    val uploadedPartsJson = parseArrayFromData(data, "uploadedParts")
+
+                    if (uploadId != null) {
+                        val existingParts = uploadedPartsJson ?: emptyList()
+                        if (existingParts.isNotEmpty()) {
+                            uploadNextPart(uri, fileSize, uploadId, existingParts.size + 1, existingParts)
+                        } else {
+                            uploadNextPart(uri, fileSize, uploadId, 1, emptyList())
+                        }
+                    } else {
+                        updateProgress(0, "初始化失败: 未获取到uploadId")
+                    }
+                } else {
+                    updateProgress(0, "初始化失败: ${response.body()?.message}")
+                }
+            }
+
+            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                updateProgress(0, "网络错误: ${t.message}")
+            }
+        })
+    }
+
+    private fun uploadNextPart(
+        uri: Uri,
+        fileSize: Long,
+        uploadId: String,
+        partNumber: Int,
+        uploadedParts: List<CompletedPart>
+    ) {
+        val totalParts = (fileSize + PART_SIZE - 1) / PART_SIZE
+
+        if (partNumber > totalParts) {
+            completeUpload(uploadId, uploadedParts)
+            return
+        }
+
+        try {
+            val inputStream = requireContext().contentResolver.openInputStream(uri)
+            if (inputStream == null) {
+                updateProgress(0, "无法打开文件")
+                return
+            }
+
+            val offset = (partNumber - 1) * PART_SIZE
+            inputStream.skip(offset)
+
+            val bytesToRead = minOf(PART_SIZE, fileSize - offset)
+            val buffer = ByteArray(bytesToRead.toInt())
+            var totalBytesRead = inputStream.read(buffer, 0, bytesToRead.toInt())
+
+            while (totalBytesRead < bytesToRead.toInt() && totalBytesRead != -1) {
+                val read = inputStream.read(buffer, totalBytesRead, bytesToRead.toInt() - totalBytesRead)
+                if (read == -1) break
+                totalBytesRead += read
+            }
+
+            inputStream.close()
+
+            if (totalBytesRead <= 0) {
+                updateProgress(0, "读取文件失败")
+                return
+            }
+
+            val requestBody = buffer.sliceArray(0 until totalBytesRead).toRequestBody()
+            val progress = ((partNumber - 1).toFloat() / totalParts * 100).toInt()
+            updateProgress(progress, "上传中... $progress%")
+
+            RetrofitClient.api.uploadPart(uploadId, partNumber, requestBody)
+                .enqueue(object : Callback<ApiResponse> {
+                    override fun onResponse(
+                        call: Call<ApiResponse>,
+                        response: Response<ApiResponse>
+                    ) {
+                        if (response.isSuccessful && response.body()?.code == 0) {
+                            val data = response.body()?.data
+                            val etag = parseStringFromData(data, "etag") ?: ""
+
+                            val newPart = CompletedPart(partNumber, etag)
+                            val updatedParts = uploadedParts + newPart
+
+                            uploadNextPart(uri, fileSize, uploadId, partNumber + 1, updatedParts)
+                        } else {
+                            updateProgress(0, "上传分片 $partNumber 失败")
+                        }
+                    }
+
+                    override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                        updateProgress(0, "网络错误: ${t.message}")
+                    }
+                })
+        } catch (e: Exception) {
+            updateProgress(0, "读取文件失败: ${e.message}")
+        }
+    }
+
+    private fun completeUpload(uploadId: String, uploadedParts: List<CompletedPart>) {
+        updateProgress(100, "正在完成上传...")
+
+        val request = UploadCompleteRequest(parts = uploadedParts)
+
+        RetrofitClient.api.completeUpload(uploadId, request)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(
+                    call: Call<ApiResponse>,
+                    response: Response<ApiResponse>
+                ) {
+                    if (response.isSuccessful && response.body()?.code == 0) {
+                        dismissUploadDialog()
+                        Toast.makeText(requireContext(), "文件上传成功", Toast.LENGTH_SHORT).show()
+                        loadResources()
+                    } else {
+                        updateProgress(100, "完成上传失败: ${response.body()?.message}")
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    updateProgress(100, "网络错误: ${t.message}")
+                }
+            })
+    }
+
+    private fun parseArrayFromData(data: Any?, key: String): List<CompletedPart>? {
+        if (data == null) return null
+        return try {
+            val json = Gson().toJson(data)
+            val map = Gson().fromJson(json, object : TypeToken<Map<String, Any>>() {}.type) as? Map<String, Any>
+            val listJson = Gson().toJson(map?.get(key))
+            Gson().fromJson(listJson, object : TypeToken<List<CompletedPart>>() {}.type)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun getFileName(uri: Uri): String {

@@ -5,6 +5,13 @@
     android:layout_height="match_parent"
     android:background="@color/screen_bg"
     android:orientation="vertical">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:background="@color/primary_blue"
+        >
+
+    </LinearLayout>
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
@@ -15,7 +22,6 @@
         app:logo="@android:drawable/ic_menu_manage"
         android:title="智能助手"
         android:titleTextColor="@color/white"
-        android:fitsSystemWindows="true"
         app:menu="@menu/menu_agent_toolbar" />
 
     <ScrollView

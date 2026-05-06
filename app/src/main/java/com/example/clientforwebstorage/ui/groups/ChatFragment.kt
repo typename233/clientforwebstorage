@@ -90,19 +90,14 @@ class ChatFragment : Fragment() {
 
     private fun setupToolbar() {
         toolbar.title = groupName
-        toolbar.inflateMenu(R.menu.menu_chat_toolbar)
+        toolbar.navigationIcon = resources.getDrawable(android.R.drawable.ic_menu_revert, null)
         toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
         }
 
-        toolbar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_group_detail -> {
-                    navigateToGroupDetail()
-                    true
-                }
-                else -> false
-            }
+        val btnMore = view?.findViewById<android.widget.ImageButton>(R.id.btn_chat_more)
+        btnMore?.setOnClickListener {
+            navigateToGroupDetail()
         }
     }
 
@@ -245,5 +240,9 @@ class ChatFragment : Fragment() {
         }
 
         override fun getItemCount(): Int = items.size
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
 }

@@ -1,6 +1,8 @@
 package com.example.clientforwebstorage
 
+import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.activity.OnBackPressedCallback
@@ -11,7 +13,9 @@ import com.example.clientforwebstorage.ui.agent.AgentFragment
 import com.example.clientforwebstorage.ui.files.FilesFragment
 import com.example.clientforwebstorage.ui.groups.GroupsFragment
 import com.example.clientforwebstorage.ui.profile.ProfileFragment
+import com.example.clientforwebstorage.utils.LanguageUtil
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,6 +23,27 @@ class MainActivity : AppCompatActivity() {
     private var currentProfileFragment: ProfileFragment? = null
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private lateinit var bottomNav: BottomNavigationView
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val lang = LanguageUtil.getLanguageCode(newBase)
+        if (lang == "zh" || lang == "en") {
+            val locale = Locale(lang)
+            Locale.setDefault(locale)
+            val config = Configuration(newBase.resources.configuration).apply {
+                setLocale(locale)
+            }
+            val context = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                newBase.createConfigurationContext(config)
+            } else {
+                @Suppress("DEPRECATION")
+                newBase.resources.updateConfiguration(config, newBase.resources.displayMetrics)
+                newBase
+            }
+            super.attachBaseContext(context)
+        } else {
+            super.attachBaseContext(newBase)
+        }
+    }
 
     private val pickFilesLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()

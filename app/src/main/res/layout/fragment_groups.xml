@@ -9,6 +9,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:background="@color/primary_blue"
+            >
+
+        </LinearLayout>
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -18,7 +25,6 @@
             android:background="@color/primary_blue"
             android:title="群组空间"
             android:titleTextColor="@color/white"
-            android:fitsSystemWindows="true"
             app:menu="@menu/menu_groups_toolbar" />
 
         <com.google.android.material.card.MaterialCardView
@@ -74,7 +80,8 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:background="@color/screen_bg"
-            android:paddingBottom="80dp" />
+            android:clipToPadding="false"
+            android:paddingBottom="72dp" />
     </LinearLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -82,8 +89,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginEnd="18dp"
-        android:layout_marginBottom="72dp"
+        android:layout_margin="16dp"
         android:contentDescription="新建群组"
         app:backgroundTint="@color/fab_blue"
         app:srcCompat="@android:drawable/ic_input_add" />
