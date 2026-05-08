@@ -2,8 +2,6 @@ package com.example.clientforwebstorage.ui.groups
 
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -16,7 +14,15 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.clientforwebstorage.R
+import com.example.clientforwebstorage.network.RetrofitClient
+import com.example.clientforwebstorage.network.models.ApiResponse
+import com.example.clientforwebstorage.network.models.SendMessageRequest
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 data class ChatMessage(
     val id: String,
@@ -34,16 +40,17 @@ class ChatFragment : Fragment() {
     private lateinit var etMessageInput: EditText
     private lateinit var btnSend: ImageButton
     private lateinit var messageAdapter: MessageAdapter
-    
+
     private var groupId: String? = null
     private var groupName: String = ""
-    
+    private var currentUserId: String = ""
+
     private val messages = mutableListOf<ChatMessage>()
 
     companion object {
         private const val ARG_GROUP_ID = "group_id"
         private const val ARG_GROUP_NAME = "group_name"
-        
+
         fun newInstance(groupId: String, groupName: String): ChatFragment {
             return ChatFragment().apply {
                 arguments = Bundle().apply {
@@ -56,7 +63,6 @@ class ChatFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
         arguments?.let {
             groupId = it.getString(ARG_GROUP_ID)
             groupName = it.getString(ARG_GROUP_NAME, "群组聊天")
@@ -78,7 +84,7 @@ class ChatFragment : Fragment() {
         setupToolbar()
         setupRecyclerView()
         setupInputArea()
-        loadMockMessages()
+        loadMessages()
     }
 
     private fun initViews(view: View) {
@@ -95,7 +101,7 @@ class ChatFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
-        val btnMore = view?.findViewById<android.widget.ImageButton>(R.id.btn_chat_more)
+        val btnMore = view?.findViewById<ImageButton>(R.id.btn_chat_more)
         btnMore?.setOnClickListener {
             navigateToGroupDetail()
         }
@@ -132,59 +138,85 @@ class ChatFragment : Fragment() {
         }
     }
 
-    private fun sendMessage(content: String) {
-        val newMessage = ChatMessage(
-            id = System.currentTimeMillis().toString(),
-            senderId = "current_user",
-            senderName = "我",
-            content = content,
-            timestamp = getCurrentTime(),
-            isOwn = true
-        )
-        
-        messages.add(newMessage)
-        messageAdapter.notifyItemInserted(messages.size - 1)
-        recyclerMessages.scrollToPosition(messages.size - 1)
-        
-        // TODO: 调用实际的消息发送 API
-        Toast.makeText(requireContext(), "消息发送成功（模拟）", Toast.LENGTH_SHORT).show()
+    private fun loadMessages() {
+        val gid = groupId ?: return
+
+        RetrofitClient.api.getGroupMessages(gid, 1, 50)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful && response.body()?.code == 0) {
+                        val data = response.body()?.data
+                        val messageList = parseMessages(data)
+                        messages.clear()
+                        messages.addAll(messageList)
+                        messageAdapter.notifyDataSetChanged()
+
+                        if (messages.isNotEmpty()) {
+                            recyclerMessages.scrollToPosition(messages.size - 1)
+                        }
+                    } else {
+                        val errorMsg = if (response.isSuccessful) {
+                            "加载失败: ${response.body()?.message}"
+                        } else {
+                            "加载失败: HTTP ${response.code()}"
+                        }
+                        Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(requireContext(), "网络错误: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
-    private fun loadMockMessages() {
-        // 加载模拟数据（后续替换为真实 API）
-        messages.clear()
-        
-        messages.add(ChatMessage(
-            id = "1",
-            senderId = "user_1",
-            senderName = "张三",
-            content = "大家好！",
-            timestamp = "14:25",
-            isOwn = false
-        ))
-        
-        messages.add(ChatMessage(
-            id = "2",
-            senderId = "user_2",
-            senderName = "李四",
-            content = "文件已经上传到共享文件夹了",
-            timestamp = "14:28",
-            isOwn = false
-        ))
-        
-        messages.add(ChatMessage(
-            id = "3",
-            senderId = "current_user",
-            senderName = "我",
-            content = "收到，辛苦了！",
-            timestamp = "14:30",
-            isOwn = true
-        ))
-        
-        messageAdapter.notifyDataSetChanged()
-        
-        if (messages.isNotEmpty()) {
-            recyclerMessages.scrollToPosition(messages.size - 1)
+    private fun sendMessage(content: String) {
+        val gid = groupId ?: return
+
+        val request = SendMessageRequest(content = content)
+
+        RetrofitClient.api.sendGroupMessage(gid, request)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful && response.body()?.code == 0) {
+                        loadMessages()
+                    } else {
+                        Toast.makeText(requireContext(), "发送消息失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Toast.makeText(requireContext(), "网络错误: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun parseMessages(data: Any?): List<ChatMessage> {
+        if (data == null) return emptyList()
+        return try {
+            val json = Gson().toJson(data)
+            val type = object : TypeToken<List<Map<String, Any?>>>() {}.type
+            val rawList: List<Map<String, Any?>> = Gson().fromJson(json, type)
+
+            rawList.map { item ->
+                val senderName = item["senderName"]?.toString() ?: item["sender"]?.toString() ?: "未知用户"
+                val senderId = item["senderId"]?.toString() ?: item["userId"]?.toString() ?: ""
+                val content = item["content"]?.toString() ?: ""
+                val timestamp = item["createdAt"]?.toString() ?: item["timestamp"]?.toString() ?: ""
+                val id = item["id"]?.toString() ?: ""
+                val isOwn = senderId == currentUserId || item["isOwn"] as? Boolean == true
+
+                ChatMessage(
+                    id = id,
+                    senderId = senderId,
+                    senderName = senderName,
+                    content = content,
+                    timestamp = timestamp,
+                    isOwn = isOwn
+                )
+            }
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 
@@ -210,14 +242,12 @@ class ChatFragment : Fragment() {
                 tvMessageTime.text = message.timestamp
 
                 if (message.isOwn) {
-                    // 自己的消息：靠右，无头像，无昵称，绿色气泡
                     layoutContainer.gravity = android.view.Gravity.END
                     ivAvatar.visibility = View.GONE
                     tvSenderName.visibility = View.GONE
                     layoutNameBubble.setPadding(0, 0, 0, 0)
                     layoutBubble.setBackgroundResource(R.drawable.bg_chat_bubble_sent)
                 } else {
-                    // 对方的消息：靠左，有头像，昵称在气泡上方（QQ风格）
                     layoutContainer.gravity = android.view.Gravity.START
                     ivAvatar.visibility = View.VISIBLE
                     ivAvatar.setImageResource(android.R.drawable.ic_menu_myplaces)

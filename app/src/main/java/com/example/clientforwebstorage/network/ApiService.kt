@@ -384,4 +384,17 @@ interface ApiService {
         @Query("page") page: Int?,
         @Query("pageSize") pageSize: Int?
     ): Call<ApiResponse>
+
+    @GET("api/v2/groups/{groupId}/messages")
+    fun getGroupMessages(
+        @Path("groupId") groupId: String,
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
+    @POST("api/v2/groups/{groupId}/messages")
+    fun sendGroupMessage(
+        @Path("groupId") groupId: String,
+        @Body request: com.example.clientforwebstorage.network.models.SendMessageRequest
+    ): Call<ApiResponse>
 }

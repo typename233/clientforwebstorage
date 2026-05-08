@@ -22,7 +22,7 @@
             android:layout_height="wrap_content"
             android:minHeight="56dp"
             android:background="@color/primary_blue"
-            android:title="@string/my_profile"
+            android:title="我的"
             android:titleTextColor="@color/white" />
 
         <com.google.android.material.card.MaterialCardView
@@ -85,7 +85,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="@string/storage_info"
+                    android:text="存储空间使用情况"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
@@ -141,7 +141,7 @@
             android:layout_height="wrap_content"
             android:paddingStart="16dp"
             android:paddingTop="4dp"
-            android:text="@string/storage_info"
+            android:text="存储与分享"
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />
 
@@ -172,7 +172,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="@string/storage_info"
+                    android:text="回收站"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
@@ -210,7 +210,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="@string/my_shares"
+                    android:text="我的分享"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
@@ -248,7 +248,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="@string/my_activities"
+                    android:text="操作记录"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
@@ -286,7 +286,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="@string/my_favorites"
+                    android:text="收藏夹"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
@@ -324,7 +324,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="@string/my_notifications"
+                    android:text="通知中心"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
@@ -342,7 +342,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:paddingStart="16dp"
-            android:text="@string/settings"
+            android:text="设置"
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />
 
@@ -372,7 +372,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="@string/my_notifications"
+                    android:text="消息通知"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
@@ -407,44 +407,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="@string/privacy_security"
-                    android:textColor="@color/text_primary"
-                    android:textSize="17sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="›"
-                    android:textColor="#888888"
-                    android:textSize="24sp" />
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/divider" />
-
-            <LinearLayout
-                android:id="@+id/item_language"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@android:drawable/ic_menu_mapmode"
-                    android:tint="#6D6D6D" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:text="@string/language_settings"
+                    android:text="隐私与安全"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp" />
 
@@ -462,7 +425,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:paddingStart="16dp"
-            android:text="@string/other"
+            android:text="其他"
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />
 
@@ -488,7 +451,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="14dp"
                 android:layout_weight="1"
-                android:text="@string/logout"
+                android:text="退出登录"
                 android:textColor="@color/text_primary"
                 android:textSize="17sp" />
 
@@ -506,7 +469,7 @@
             android:layout_marginTop="14dp"
             android:gravity="center"
             android:paddingBottom="20dp"
-            android:text="@string/version_info"
+            android:text="NetDisk v1.0.0"
             android:textColor="#9CA3AF"
             android:textSize="12sp" />
     </LinearLayout>
