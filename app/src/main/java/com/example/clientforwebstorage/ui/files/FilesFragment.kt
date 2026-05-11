@@ -106,7 +106,7 @@ class FilesFragment : Fragment() {
     private fun showMoreMenu(anchor: View) {
         val popupView = LayoutInflater.from(requireContext())
             .inflate(R.layout.popup_files_menu, null)
-        
+
         val popupWindow = PopupWindow(
             popupView,
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -118,12 +118,36 @@ class FilesFragment : Fragment() {
             isOutsideTouchable = true
             isFocusable = true
         }
-        
+
         popupView.findViewById<View>(R.id.menu_refresh)?.setOnClickListener {
             loadResources()
             popupWindow.dismiss()
         }
-        
+
+        popupView.findViewById<View>(R.id.menu_sort)?.setOnClickListener {
+            popupWindow.dismiss()
+            showSortMenu(anchor)
+        }
+
+        popupWindow.showAsDropDown(anchor, -dpToPx(120), 0)
+    }
+
+    private fun showSortMenu(anchor: View) {
+        val sortPopupView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.popup_sort_menu, null)
+
+        val sortPopupWindow = PopupWindow(
+            sortPopupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = 10f
+            setBackgroundDrawable(resources.getDrawable(android.R.color.white, null))
+            isOutsideTouchable = true
+            isFocusable = true
+        }
+
         val sortOptions = mapOf(
             R.id.sort_name_asc to SortType.NAME_ASC,
             R.id.sort_name_desc to SortType.NAME_DESC,
@@ -132,18 +156,18 @@ class FilesFragment : Fragment() {
             R.id.sort_size_desc to SortType.SIZE_DESC,
             R.id.sort_size_asc to SortType.SIZE_ASC
         )
-        
+
         sortOptions.forEach { (id, sortType) ->
-            popupView.findViewById<View>(id)?.setOnClickListener {
+            sortPopupView.findViewById<View>(id)?.setOnClickListener {
                 currentSortType = sortType
                 displayResources(currentResources)
-                updateSortMenuUI(popupView)
+                sortPopupWindow.dismiss()
             }
         }
-        
-        updateSortMenuUI(popupView)
-        
-        popupWindow.showAsDropDown(anchor, -dpToPx(120), 0)
+
+        updateSortMenuUI(sortPopupView)
+
+        sortPopupWindow.showAsDropDown(anchor, -dpToPx(120), 0)
     }
     
     private fun updateSortMenuUI(popupView: View) {
