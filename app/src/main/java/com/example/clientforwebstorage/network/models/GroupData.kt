@@ -10,5 +10,7 @@ data class GroupData(
     val storageUsed: Long = 0L,
     val storageQuota: Long? = null,
     val avatarUrl: String? = null,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val isPinned: Boolean? = null,
+    val isMuted: Boolean? = null
 )

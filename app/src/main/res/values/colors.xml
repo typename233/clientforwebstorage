@@ -16,7 +16,17 @@
     <color name="chip_selected_bg">#E3F2FD</color>
     <color name="chip_selected_stroke">#42A5F5</color>
     <color name="fab_blue">#1E88E5</color>
-    <color name="role_owner_bg">#D32F2F</color>
-    <color name="role_editor_bg">#1976D2</color>
-    <color name="role_viewer_bg">#374151</color>
+
+    <!-- 角色标签优化颜色 - 符合WCAG 4.5:1标准 -->
+    <color name="role_owner_bg">#FFF3E0</color>
+    <color name="role_owner_text">#E65100</color>
+
+    <color name="role_editor_bg">#E0F7FA</color>
+    <color name="role_editor_text">#00838F</color>
+
+    <color name="role_viewer_bg">#F3E5F5</color>
+    <color name="role_viewer_text">#6A1B9A</color>
+
+    <color name="tab_selected_text">#FFCA28</color>
+    <color name="tab_unselected_text">#FFE082</color>
 </resources>

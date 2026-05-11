@@ -6,5 +6,7 @@ data class UpdateGroupRequest(
     val visibility: String? = null,
     val quotaBytes: Long? = null,
     val maxMembers: Int? = null,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val isPinned: Boolean? = null,
+    val isMuted: Boolean? = null
 )

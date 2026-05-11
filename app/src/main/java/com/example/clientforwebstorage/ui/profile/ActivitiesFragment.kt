@@ -4,10 +4,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.example.clientforwebstorage.R
@@ -16,6 +19,7 @@ import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.UserActivity
 import com.example.clientforwebstorage.network.models.UserActivityListData
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -37,6 +41,20 @@ class ActivitiesFragment : Fragment() {
     private lateinit var progressLoading: ProgressBar
     private lateinit var containerList: LinearLayout
 
+    private lateinit var spinnerPageSize: Spinner
+    private lateinit var btnPrevPage: MaterialButton
+    private lateinit var btnNextPage: MaterialButton
+    private lateinit var tvCurrentPage: TextView
+    private lateinit var tvTotalPages: TextView
+    private lateinit var tvPageInfo: TextView
+    private lateinit var paginationLayout: View
+
+    private var currentPage = 1
+    private var pageSize = 5
+    private var totalPages = 0
+    private var totalRecords = 0
+    private val pageSizeOptions = arrayOf(5, 10, 20, 50, 100)
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -50,7 +68,8 @@ class ActivitiesFragment : Fragment() {
 
         initViews(view)
         setupToolbar()
-        loadActivitiesData()
+        setupPaginationControls()
+        loadActivitiesData(currentPage, pageSize)
     }
 
     private fun initViews(view: View) {
@@ -61,6 +80,14 @@ class ActivitiesFragment : Fragment() {
         tvEmptyState = view.findViewById(R.id.tv_empty_state)
         progressLoading = view.findViewById(R.id.progress_loading)
         containerList = view.findViewById(R.id.container_activity_list)
+
+        paginationLayout = view.findViewById(R.id.pagination_layout)
+        spinnerPageSize = view.findViewById(R.id.spinner_page_size)
+        btnPrevPage = view.findViewById(R.id.btn_prev_page)
+        btnNextPage = view.findViewById(R.id.btn_next_page)
+        tvCurrentPage = view.findViewById(R.id.tv_current_page)
+        tvTotalPages = view.findViewById(R.id.tv_total_pages)
+        tvPageInfo = view.findViewById(R.id.tv_page_info)
     }
 
     private fun setupToolbar() {
@@ -69,12 +96,77 @@ class ActivitiesFragment : Fragment() {
         }
     }
 
-    private fun loadActivitiesData() {
+    private fun setupPaginationControls() {
+        val adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            pageSizeOptions.map { "$it 条/页" }
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerPageSize.adapter = adapter
+
+        val defaultSelection = pageSizeOptions.indexOfFirst { it == pageSize }
+        if (defaultSelection >= 0) {
+            spinnerPageSize.setSelection(defaultSelection)
+        }
+
+        spinnerPageSize.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val newPageSize = pageSizeOptions[position]
+                if (newPageSize != pageSize) {
+                    pageSize = newPageSize
+                    currentPage = 1
+                    loadActivitiesData(currentPage, pageSize)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        btnPrevPage.setOnClickListener {
+            if (currentPage > 1) {
+                currentPage--
+                loadActivitiesData(currentPage, pageSize)
+            }
+        }
+
+        btnNextPage.setOnClickListener {
+            if (currentPage < totalPages) {
+                currentPage++
+                loadActivitiesData(currentPage, pageSize)
+            }
+        }
+    }
+
+    private fun updatePaginationUI() {
+        tvCurrentPage.text = currentPage.toString()
+        tvTotalPages.text = if (totalPages == 0) "1" else totalPages.toString()
+
+        btnPrevPage.isEnabled = currentPage > 1
+        btnNextPage.isEnabled = currentPage < totalPages
+
+        if (totalRecords > 0) {
+            val startRecord = (currentPage - 1) * pageSize + 1
+            val endRecord = minOf(currentPage * pageSize, totalRecords)
+            tvPageInfo.text = "共 $totalRecords 条记录 · 显示第 $startRecord-$endRecord 条"
+        } else {
+            tvPageInfo.text = "共 0 条记录"
+        }
+
+        paginationLayout.visibility = if (totalRecords > 0 && totalPages > 1) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+    }
+
+    private fun loadActivitiesData(page: Int, size: Int) {
         progressLoading.visibility = View.VISIBLE
         containerList.visibility = View.GONE
         tvEmptyState.visibility = View.GONE
+        paginationLayout.visibility = View.GONE
 
-        RetrofitClient.api.getUserActivities(1, 100)
+        RetrofitClient.api.getUserActivities(page, size)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                     progressLoading.visibility = View.GONE
@@ -82,17 +174,26 @@ class ActivitiesFragment : Fragment() {
                     if (response.isSuccessful && response.body()?.code == 0) {
                         val data = parseData<UserActivityListData>(response.body()?.data)
                         val activities = data?.items ?: emptyList()
+                        totalRecords = data?.total ?: 0
+
+                        if (totalRecords > 0 && size > 0) {
+                            totalPages = (totalRecords + size - 1) / size
+                        } else {
+                            totalPages = 0
+                        }
 
                         updateStatistics(activities)
                         displayActivityItems(activities)
+                        updatePaginationUI()
                     } else {
-                        showError("加载失败")
+                        showError("加载失败：${response.body()?.message ?: "未知错误"}")
                     }
                 }
 
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                     progressLoading.visibility = View.GONE
                     showError("网络错误：${t.message}")
+                    updatePaginationUI()
                 }
             })
     }
@@ -111,6 +212,7 @@ class ActivitiesFragment : Fragment() {
         containerList.removeAllViews()
 
         if (activities.isEmpty()) {
+            tvEmptyState.text = "暂无操作记录\n您的操作历史将在这里显示"
             tvEmptyState.visibility = View.VISIBLE
             containerList.visibility = View.GONE
             return

@@ -6,5 +6,7 @@ data class GroupItem(
     val role: String,
     val memberCount: Int,
     val storageUsed: String,
-    val visibility: String
+    val visibility: String,
+    val isPinned: Boolean = false,
+    val isMuted: Boolean = false
 )

@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -103,8 +104,46 @@ class ChatFragment : Fragment() {
 
         val btnMore = view?.findViewById<ImageButton>(R.id.btn_chat_more)
         btnMore?.setOnClickListener {
-            navigateToGroupDetail()
+            showChatMenu(it)
         }
+    }
+
+    private fun showChatMenu(anchor: View) {
+        val popupView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.popup_chat_menu, null)
+
+        popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val popupWidth = popupView.measuredWidth
+
+        val popupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = 10f
+            setBackgroundDrawable(resources.getDrawable(android.R.color.white, null))
+            isOutsideTouchable = true
+            isFocusable = true
+        }
+
+        popupView.findViewById<View>(R.id.menu_group_info)?.setOnClickListener {
+            navigateToGroupDetail()
+            popupWindow.dismiss()
+        }
+
+        popupView.findViewById<View>(R.id.menu_search_messages)?.setOnClickListener {
+            Toast.makeText(requireContext(), "搜索消息功能开发中", Toast.LENGTH_SHORT).show()
+            popupWindow.dismiss()
+        }
+
+        popupView.findViewById<View>(R.id.menu_clear_messages)?.setOnClickListener {
+            Toast.makeText(requireContext(), "清空消息记录功能开发中", Toast.LENGTH_SHORT).show()
+            popupWindow.dismiss()
+        }
+
+        val offsetX = anchor.width - popupWidth
+        popupWindow.showAsDropDown(anchor, offsetX, 0)
     }
 
     private fun navigateToGroupDetail() {

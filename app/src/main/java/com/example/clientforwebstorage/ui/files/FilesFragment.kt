@@ -107,6 +107,9 @@ class FilesFragment : Fragment() {
         val popupView = LayoutInflater.from(requireContext())
             .inflate(R.layout.popup_files_menu, null)
 
+        popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val popupWidth = popupView.measuredWidth
+
         val popupWindow = PopupWindow(
             popupView,
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -129,12 +132,16 @@ class FilesFragment : Fragment() {
             showSortMenu(anchor)
         }
 
-        popupWindow.showAsDropDown(anchor, -dpToPx(120), 0)
+        val offsetX = anchor.width - popupWidth
+        popupWindow.showAsDropDown(anchor, offsetX, 0)
     }
 
     private fun showSortMenu(anchor: View) {
         val sortPopupView = LayoutInflater.from(requireContext())
             .inflate(R.layout.popup_sort_menu, null)
+
+        sortPopupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val sortPopupWidth = sortPopupView.measuredWidth
 
         val sortPopupWindow = PopupWindow(
             sortPopupView,
@@ -167,7 +174,8 @@ class FilesFragment : Fragment() {
 
         updateSortMenuUI(sortPopupView)
 
-        sortPopupWindow.showAsDropDown(anchor, -dpToPx(120), 0)
+        val offsetX = anchor.width - sortPopupWidth
+        sortPopupWindow.showAsDropDown(anchor, offsetX, 0)
     }
     
     private fun updateSortMenuUI(popupView: View) {
@@ -268,6 +276,7 @@ class FilesFragment : Fragment() {
         RetrofitClient.api.createFolder(CreateFolderRequest(currentParentId, name))
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
                     if (response.isSuccessful && response.body()?.code == 0) {
                         Toast.makeText(requireContext(), "文件夹已创建: $name", Toast.LENGTH_SHORT).show()
                         loadResources()
@@ -276,6 +285,7 @@ class FilesFragment : Fragment() {
                     }
                 }
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -344,6 +354,7 @@ class FilesFragment : Fragment() {
         RetrofitClient.api.renameResource(resourceId, RenameRequest(newName))
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
                     if (response.isSuccessful && response.body()?.code == 0) {
                         Toast.makeText(requireContext(), "已重命名", Toast.LENGTH_SHORT).show()
                         loadResources()
@@ -352,6 +363,7 @@ class FilesFragment : Fragment() {
                     }
                 }
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -370,6 +382,7 @@ class FilesFragment : Fragment() {
         RetrofitClient.api.deleteResource(resourceId)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
                     if (response.isSuccessful && response.body()?.code == 0) {
                         Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show()
                         loadResources()
@@ -378,6 +391,7 @@ class FilesFragment : Fragment() {
                     }
                 }
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -387,6 +401,7 @@ class FilesFragment : Fragment() {
         RetrofitClient.api.getDownloadUrl(item.id)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
                     if (response.isSuccessful && response.body()?.code == 0) {
                         val url = parseStringFromData(response.body()?.data, "downloadUrl")
                         if (url != null) {
@@ -399,6 +414,7 @@ class FilesFragment : Fragment() {
                     }
                 }
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -480,6 +496,7 @@ class FilesFragment : Fragment() {
         ))
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
                     if (response.isSuccessful && response.body()?.code == 0) {
                         val shareCode = parseStringFromData(response.body()?.data, "shareCode")
                             ?: parseStringFromData(response.body()?.data, "code")
@@ -495,6 +512,7 @@ class FilesFragment : Fragment() {
                     }
                 }
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -626,6 +644,7 @@ class FilesFragment : Fragment() {
         RetrofitClient.api.getResources(currentParentId, null, 1, 50)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
                     if (response.isSuccessful) {
                         val apiResponse = response.body()
                         if (apiResponse?.code == 0) {
@@ -640,6 +659,7 @@ class FilesFragment : Fragment() {
                     }
                 }
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
                     Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
                 }
             })
@@ -831,6 +851,7 @@ class FilesFragment : Fragment() {
 
         RetrofitClient.api.initUpload(request).enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                if (!isAdded) return@onResponse
                 if (response.isSuccessful && response.body()?.code == 0) {
                     val data = response.body()?.data
                     val uploadId = parseStringFromData(data, "uploadId")
@@ -852,6 +873,7 @@ class FilesFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                if (!isAdded) return@onFailure
                 updateProgress(0, "网络错误: ${t.message}")
             }
         })
@@ -908,6 +930,7 @@ class FilesFragment : Fragment() {
                         call: Call<ApiResponse>,
                         response: Response<ApiResponse>
                     ) {
+                        if (!isAdded) return@onResponse
                         if (response.isSuccessful && response.body()?.code == 0) {
                             val data = response.body()?.data
                             val etag = parseStringFromData(data, "etag") ?: ""
@@ -922,6 +945,7 @@ class FilesFragment : Fragment() {
                     }
 
                     override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                        if (!isAdded) return@onFailure
                         updateProgress(0, "网络错误: ${t.message}")
                     }
                 })
@@ -941,6 +965,7 @@ class FilesFragment : Fragment() {
                     call: Call<ApiResponse>,
                     response: Response<ApiResponse>
                 ) {
+                    if (!isAdded) return@onResponse
                     if (response.isSuccessful && response.body()?.code == 0) {
                         dismissUploadDialog()
                         Toast.makeText(requireContext(), "文件上传成功", Toast.LENGTH_SHORT).show()
@@ -951,6 +976,7 @@ class FilesFragment : Fragment() {
                 }
 
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
                     updateProgress(100, "网络错误: ${t.message}")
                 }
             })

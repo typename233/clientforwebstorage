@@ -24,14 +24,32 @@
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/tv_invitee"
+                android:id="@+id/tv_type_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:gravity="center"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="邀请"
+                android:textSize="11sp"
+                android:textColor="@color/white"
+                android:background="@drawable/bg_chip_selected" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+
+            <TextView
+                android:id="@+id/tv_title"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="user@example.com"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:textColor="@color/text_primary"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/tv_status"
@@ -62,14 +80,17 @@
                 android:layout_weight="1"
                 android:text="群组名称"
                 android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
+                android:textColor="@color/text_secondary"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/tv_role"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:text="编辑者"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textColor="#666666" />
 
         </LinearLayout>
@@ -77,21 +98,31 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="end"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/btn_cancel"
+                android:id="@+id/tv_time"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="2026-05-11 10:30"
+                android:textSize="12sp"
+                android:textColor="#AAAAAA" />
+
+            <TextView
+                android:id="@+id/btn_action"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:gravity="center"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:text="撤销邀请"
+                android:text=""
                 android:textSize="14sp"
                 android:textColor="#D32F2F"
-                android:background="?attr/selectableItemBackground" />
+                android:background="?attr/selectableItemBackground"
+                android:visibility="gone" />
 
         </LinearLayout>
 

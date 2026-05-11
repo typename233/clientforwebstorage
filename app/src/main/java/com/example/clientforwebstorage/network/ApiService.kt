@@ -233,6 +233,12 @@ interface ApiService {
         @Query("pageSize") pageSize: Int?
     ): Call<ApiResponse>
 
+    @GET("api/v2/me/invites")
+    fun getMyInvites(
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
     @POST("api/v2/groups/{groupId}/join-requests/{requestId}/approve")
     fun approveJoinRequest(
         @Path("groupId") groupId: String,

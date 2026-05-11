@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/group_item_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
@@ -8,7 +9,11 @@
     android:paddingStart="12dp"
     android:paddingTop="8dp"
     android:paddingEnd="12dp"
-    android:paddingBottom="8dp">
+    android:paddingBottom="8dp"
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginBottom="4dp">
 
     <ImageView
         android:layout_width="40dp"
@@ -57,8 +62,8 @@
             android:paddingTop="2dp"
             android:paddingEnd="8dp"
             android:paddingBottom="2dp"
-            android:textColor="@android:color/white"
-            android:textSize="11sp" />
+            android:textSize="11sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tv_group_meta"
@@ -69,12 +74,14 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <TextView
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:gravity="center"
-        android:text="⋮"
-        android:textColor="#8A8A8A"
-        android:textSize="18sp" />
+    <ImageButton
+        android:id="@+id/btn_group_more"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_more_vert"
+        android:tint="#8A8A8A"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="更多选项"
+        android:padding="6dp" />
 
 </LinearLayout>

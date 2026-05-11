@@ -254,6 +254,46 @@
         "responses": { "200": { "$ref": "#/components/responses/Ok" } }
       }
     },
+    "/api/v2/me/invites": {
+      "get": {
+        "tags": ["GroupInvite"],
+        "summary": "我的邀请列表（当前用户收到的群组邀请）",
+        "description": "获取当前登录用户收到的所有群组邀请记录，支持分页查询。只能查询当前登录用户的邀请记录。",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQuery" },
+          { "$ref": "#/components/parameters/PageSizeQuery" }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功返回邀请列表",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" },
+                "example": {
+                  "code": 0,
+                  "message": "success",
+                  "data": {
+                    "total": 25,
+                    "items": [
+                      {
+                        "inviteId": "inv_001",
+                        "groupId": "grp_001",
+                        "groupName": "项目协作组",
+                        "inviterUserId": "user_002",
+                        "role": "editor",
+                        "status": "pending",
+                        "expiredAt": "2026-06-11 23:59:59",
+                        "createdAt": "2026-05-11 10:30:00"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/groups/{groupId}/join-requests/{requestId}/approve": {
       "post": {
         "tags": ["GroupJoinRequest"],
@@ -805,6 +845,21 @@
           "role": { "type": "string", "enum": ["editor", "viewer"] },
           "expireHours": { "type": "integer", "default": 72, "minimum": 1 }
         }
+      },
+      "InviteData": {
+        "type": "object",
+        "description": "邀请记录数据项",
+        "properties": {
+          "inviteId": { "type": "string", "description": "邀请ID" },
+          "groupId": { "type": "string", "description": "群组ID" },
+          "groupName": { "type": "string", "description": "群组名称" },
+          "inviterUserId": { "type": "string", "description": "邀请者用户ID" },
+          "role": { "type": "string", "enum": ["owner", "editor", "viewer"], "description": "邀请角色" },
+          "status": { "type": "string", "enum": ["pending", "accepted", "rejected", "expired", "cancelled"], "description": "邀请状态" },
+          "expiredAt": { "type": "string", "description": "过期时间，格式：YYYY-MM-DD HH:MM:SS" },
+          "createdAt": { "type": "string", "description": "创建时间，格式：YYYY-MM-DD HH:MM:SS" }
+        },
+        "required": ["inviteId", "groupId", "groupName", "inviterUserId", "role", "status", "expiredAt", "createdAt"]
       }
     }
   }

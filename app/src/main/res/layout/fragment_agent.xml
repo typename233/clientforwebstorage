@@ -21,8 +21,19 @@
         android:background="@color/primary_blue"
         app:logo="@android:drawable/ic_menu_manage"
         android:title="智能助手"
-        android:titleTextColor="@color/white"
-        app:menu="@menu/menu_agent_toolbar" />
+        android:titleTextColor="@color/white">
+
+        <ImageButton
+            android:id="@+id/btn_agent_more"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:src="@drawable/ic_more_vert"
+            android:tint="#FFFFFF"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="更多选项"
+            android:padding="10dp" />
+    </com.google.android.material.appbar.MaterialToolbar>
 
     <ScrollView
         android:layout_width="match_parent"
