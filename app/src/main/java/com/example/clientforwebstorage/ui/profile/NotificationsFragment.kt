@@ -89,6 +89,7 @@ class NotificationsFragment : Fragment() {
                 call: Call<com.example.clientforwebstorage.network.models.ApiResponse>,
                 response: Response<com.example.clientforwebstorage.network.models.ApiResponse>
             ) {
+                if (!isAdded) return@onResponse
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
                     if (apiResponse.code == 0) {
@@ -102,6 +103,7 @@ class NotificationsFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<com.example.clientforwebstorage.network.models.ApiResponse>, t: Throwable) {
+                if (!isAdded) return@onFailure
                 showError("网络错误: ${t.message}")
             }
         })
@@ -139,6 +141,7 @@ class NotificationsFragment : Fragment() {
                 call: Call<com.example.clientforwebstorage.network.models.ApiResponse>,
                 response: Response<com.example.clientforwebstorage.network.models.ApiResponse>
             ) {
+                if (!isAdded) return@onResponse
                 if (response.isSuccessful && response.body()?.code == 0) {
                     Toast.makeText(requireContext(), "已标记为已读", Toast.LENGTH_SHORT).show()
                     loadNotifications()
@@ -159,6 +162,7 @@ class NotificationsFragment : Fragment() {
                 call: Call<com.example.clientforwebstorage.network.models.ApiResponse>,
                 response: Response<com.example.clientforwebstorage.network.models.ApiResponse>
             ) {
+                if (!isAdded) return@onResponse
                 if (response.isSuccessful && response.body()?.code == 0) {
                     Toast.makeText(requireContext(), "已全部标记为已读", Toast.LENGTH_SHORT).show()
                     loadNotifications()
@@ -168,6 +172,7 @@ class NotificationsFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<com.example.clientforwebstorage.network.models.ApiResponse>, t: Throwable) {
+                if (!isAdded) return@onFailure
                 showError("网络错误")
             }
         })
@@ -215,6 +220,7 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun showError(message: String) {
+        if (!isAdded) return
         Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
     }
 }

@@ -29,4 +29,10 @@
 
     <color name="tab_selected_text">#FFCA28</color>
     <color name="tab_unselected_text">#FFE082</color>
+
+    <!-- 消息发送状态相关颜色 -->
+    <color name="error_red">#FF5252</color>
+    <color name="error_red_dark">#D32F2F</color>
+    <color name="message_failed_bg">#FFEBEE</color>
+    <color name="message_failed_border">#FFCDD2</color>
 </resources>

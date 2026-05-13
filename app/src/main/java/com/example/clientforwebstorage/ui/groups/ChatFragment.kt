@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -25,13 +26,20 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
+enum class MessageSendStatus {
+    SUCCESS,
+    FAILED,
+    SENDING
+}
+
 data class ChatMessage(
     val id: String,
     val senderId: String,
     val senderName: String,
     val content: String,
     val timestamp: String,
-    val isOwn: Boolean = false
+    val isOwn: Boolean = false,
+    var sendStatus: MessageSendStatus = MessageSendStatus.SUCCESS
 )
 
 class ChatFragment : Fragment() {
@@ -212,20 +220,77 @@ class ChatFragment : Fragment() {
     private fun sendMessage(content: String) {
         val gid = groupId ?: return
 
+        val tempId = "temp_${System.currentTimeMillis()}"
+        val tempMessage = ChatMessage(
+            id = tempId,
+            senderId = currentUserId,
+            senderName = "我",
+            content = content,
+            timestamp = getCurrentTime(),
+            isOwn = true,
+            sendStatus = MessageSendStatus.SENDING
+        )
+
+        messages.add(tempMessage)
+        messageAdapter.notifyItemInserted(messages.size - 1)
+        recyclerMessages.scrollToPosition(messages.size - 1)
+
         val request = SendMessageRequest(content = content)
+        val messageIndex = messages.size - 1
 
         RetrofitClient.api.sendGroupMessage(gid, request)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                     if (response.isSuccessful && response.body()?.code == 0) {
+                        messages[messageIndex].sendStatus = MessageSendStatus.SUCCESS
+                        messageAdapter.notifyItemChanged(messageIndex)
                         loadMessages()
                     } else {
-                        Toast.makeText(requireContext(), "发送消息失败", Toast.LENGTH_SHORT).show()
+                        messages[messageIndex].sendStatus = MessageSendStatus.FAILED
+                        messageAdapter.notifyItemChanged(messageIndex)
+                        Toast.makeText(requireContext(), "消息发送失败，点击红色按钮重试", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                    Toast.makeText(requireContext(), "网络错误: ${t.message}", Toast.LENGTH_SHORT).show()
+                    messages[messageIndex].sendStatus = MessageSendStatus.FAILED
+                    messageAdapter.notifyItemChanged(messageIndex)
+                    Toast.makeText(requireContext(), "网络错误：${t.message}，点击红色按钮重试", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun retrySendMessage(position: Int) {
+        if (position < 0 || position >= messages.size) return
+
+        val message = messages[position]
+        if (!message.isOwn) return
+
+        message.sendStatus = MessageSendStatus.SENDING
+        messageAdapter.notifyItemChanged(position)
+
+        val gid = groupId ?: return
+        val request = SendMessageRequest(content = message.content)
+
+        RetrofitClient.api.sendGroupMessage(gid, request)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful && response.body()?.code == 0) {
+                        messages[position].sendStatus = MessageSendStatus.SUCCESS
+                        messageAdapter.notifyItemChanged(position)
+                        Toast.makeText(requireContext(), "消息重新发送成功", Toast.LENGTH_SHORT).show()
+                        loadMessages()
+                    } else {
+                        messages[position].sendStatus = MessageSendStatus.FAILED
+                        messageAdapter.notifyItemChanged(position)
+                        Toast.makeText(requireContext(), "重新发送失败，请重试", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    messages[position].sendStatus = MessageSendStatus.FAILED
+                    messageAdapter.notifyItemChanged(position)
+                    Toast.makeText(requireContext(), "网络错误：${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -260,8 +325,62 @@ class ChatFragment : Fragment() {
     }
 
     private fun getCurrentTime(): String {
-        return java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        return java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
             .format(java.util.Date())
+    }
+
+    private fun shouldShowTimestamp(position: Int): Boolean {
+        if (position < 0 || position >= messages.size) return true
+
+        val currentMessage = messages[position]
+
+        if (position == messages.size - 1) return true
+
+        val nextMessage = messages[position + 1]
+
+        return currentMessage.senderId != nextMessage.senderId
+    }
+
+    private fun formatTimestamp(timestamp: String): String {
+        if (timestamp.isBlank()) return ""
+
+        return try {
+            val inputFormats = listOf(
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "MM-dd HH:mm",
+                "HH:mm"
+            )
+
+            var parsedDate: java.util.Date? = null
+
+            for (format in inputFormats) {
+                try {
+                    val sdf = java.text.SimpleDateFormat(format, java.util.Locale.getDefault())
+                    parsedDate = sdf.parse(timestamp)
+                    if (parsedDate != null) break
+                } catch (_: Exception) {
+                    continue
+                }
+            }
+
+            if (parsedDate == null) return timestamp
+
+            val now = java.util.Date()
+            val calendarNow = java.util.Calendar.getInstance().apply { time = now }
+            val calendarMsg = java.util.Calendar.getInstance().apply { time = parsedDate }
+
+            val isSameDay = calendarNow.get(java.util.Calendar.YEAR) == calendarMsg.get(java.util.Calendar.YEAR) &&
+                    calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarMsg.get(java.util.Calendar.DAY_OF_YEAR)
+
+            return if (isSameDay) {
+                java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(parsedDate)
+            } else {
+                java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault()).format(parsedDate)
+            }
+        } catch (_: Exception) {
+            timestamp
+        }
     }
 
     inner class MessageAdapter(private val items: List<ChatMessage>) :
@@ -275,17 +394,50 @@ class ChatFragment : Fragment() {
             val layoutBubble: View = itemView.findViewById(R.id.layout_bubble)
             val tvMessageText: TextView = itemView.findViewById(R.id.tv_message_text)
             val tvMessageTime: TextView = itemView.findViewById(R.id.tv_message_time)
+            val btnRetrySend: ImageButton = itemView.findViewById(R.id.btn_retry_send)
+            val progressRetry: ProgressBar = itemView.findViewById(R.id.progress_retry)
 
-            fun bind(message: ChatMessage) {
+            fun bind(message: ChatMessage, position: Int) {
                 tvMessageText.text = message.content
-                tvMessageTime.text = message.timestamp
+
+                val formattedTime = formatTimestamp(message.timestamp)
+                tvMessageTime.text = formattedTime
+
+                val showTimestamp = shouldShowTimestamp(position)
+                tvMessageTime.visibility = if (showTimestamp) View.VISIBLE else View.GONE
+
+                when (message.sendStatus) {
+                    MessageSendStatus.SENDING -> {
+                        btnRetrySend.visibility = View.GONE
+                        progressRetry.visibility = if (message.isOwn) View.VISIBLE else View.GONE
+                    }
+                    MessageSendStatus.FAILED -> {
+                        btnRetrySend.visibility = if (message.isOwn) View.VISIBLE else View.GONE
+                        progressRetry.visibility = View.GONE
+                    }
+                    MessageSendStatus.SUCCESS -> {
+                        btnRetrySend.visibility = View.GONE
+                        progressRetry.visibility = View.GONE
+                    }
+                }
+
+                btnRetrySend.setOnClickListener {
+                    retrySendMessage(position)
+                }
 
                 if (message.isOwn) {
                     layoutContainer.gravity = android.view.Gravity.END
                     ivAvatar.visibility = View.GONE
                     tvSenderName.visibility = View.GONE
                     layoutNameBubble.setPadding(0, 0, 0, 0)
-                    layoutBubble.setBackgroundResource(R.drawable.bg_chat_bubble_sent)
+
+                    if (message.sendStatus == MessageSendStatus.FAILED) {
+                        layoutBubble.setBackgroundResource(R.drawable.bg_chat_bubble_failed)
+                        tvMessageText.alpha = 0.7f
+                    } else {
+                        layoutBubble.setBackgroundResource(R.drawable.bg_chat_bubble_sent)
+                        tvMessageText.alpha = 1.0f
+                    }
                 } else {
                     layoutContainer.gravity = android.view.Gravity.START
                     ivAvatar.visibility = View.VISIBLE
@@ -294,6 +446,7 @@ class ChatFragment : Fragment() {
                     tvSenderName.text = message.senderName
                     tvSenderName.setTextColor(0xFF666666.toInt())
                     layoutBubble.setBackgroundResource(android.R.color.white)
+                    tvMessageText.alpha = 1.0f
                 }
             }
         }
@@ -305,7 +458,7 @@ class ChatFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
-            holder.bind(items[position])
+            holder.bind(items[position], position)
         }
 
         override fun getItemCount(): Int = items.size

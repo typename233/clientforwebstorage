@@ -55,7 +55,7 @@ class GroupsFragment : Fragment() {
         val btnMore = view.findViewById<ImageButton>(R.id.btn_groups_more)
 
         btnSearch.setOnClickListener {
-            Toast.makeText(requireContext(), "搜索群组功能开发中", Toast.LENGTH_SHORT).show()
+            navigateToSearch()
         }
 
         btnMore.setOnClickListener { showMoreMenu(it) }
@@ -120,7 +120,7 @@ class GroupsFragment : Fragment() {
         }
 
         popupView.findViewById<View>(R.id.menu_search_groups)?.setOnClickListener {
-            Toast.makeText(requireContext(), "搜索群组功能开发中", Toast.LENGTH_SHORT).show()
+            navigateToSearch()
             popupWindow.dismiss()
         }
 
@@ -479,6 +479,14 @@ class GroupsFragment : Fragment() {
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, invitesFragment)
             .addToBackStack("invites")
+            .commit()
+    }
+
+    private fun navigateToSearch() {
+        val searchFragment = SearchGroupsFragment.newInstance()
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, searchFragment)
+            .addToBackStack("search_groups")
             .commit()
     }
 
