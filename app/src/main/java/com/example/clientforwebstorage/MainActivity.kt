@@ -6,6 +6,7 @@ import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import com.example.clientforwebstorage.network.TokenManager
 import com.example.clientforwebstorage.ui.agent.AgentFragment
 import com.example.clientforwebstorage.ui.files.FilesFragment
@@ -31,6 +32,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        WindowCompat.setDecorFitsSystemWindows(window, true)
 
         TokenManager.init(this)
         setContentView(R.layout.activity_main)
@@ -121,7 +124,7 @@ class MainActivity : AppCompatActivity() {
         updateBottomNavigationVisibility()
     }
 
-    private fun updateBottomNavigationVisibility() {
+    fun updateBottomNavigationVisibility() {
         if (!::bottomNav.isInitialized) return
 
         val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)

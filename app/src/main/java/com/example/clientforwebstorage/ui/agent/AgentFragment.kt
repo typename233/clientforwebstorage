@@ -349,6 +349,8 @@ class AgentFragment : Fragment() {
     private fun closeSidebar() {
         if (!isSidebarOpen) return
 
+        conversationAdapter?.hideExpandedButtons()
+
         if (::backPressedCallback.isInitialized) {
             backPressedCallback.isEnabled = false
         }
@@ -794,24 +796,23 @@ class AgentFragment : Fragment() {
             val keyboardHeight = screenHeight - rect.bottom
 
             val wasKeyboardVisible = isKeyboardVisible
-            isKeyboardVisible = keyboardHeight > 0
+            isKeyboardVisible = keyboardHeight > screenHeight * 0.15
 
             if (isKeyboardVisible && !wasKeyboardVisible) {
-                hideBottomNavigation()
+                (activity as? com.example.clientforwebstorage.MainActivity)?.hideBottomNav()
+                layoutInputContainer.animate()
+                    .translationY((-keyboardHeight).toFloat())
+                    .setDuration(0)
+                    .start()
                 scrollToBottom()
             } else if (!isKeyboardVisible && wasKeyboardVisible) {
-                showBottomNavigation()
+                layoutInputContainer.animate()
+                    .translationY(0f)
+                    .setDuration(0)
+                    .start()
+                (activity as? com.example.clientforwebstorage.MainActivity)?.updateBottomNavigationVisibility()
             }
         }
     }
 
-    private fun hideBottomNavigation() {
-        val activity = activity as? com.example.clientforwebstorage.MainActivity ?: return
-        activity.hideBottomNav()
-    }
-
-    private fun showBottomNavigation() {
-        val activity = activity as? com.example.clientforwebstorage.MainActivity ?: return
-        activity.showBottomNav()
-    }
 }

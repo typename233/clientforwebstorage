@@ -113,6 +113,9 @@ class InviteApiUnitTest {
             id = "test_extra",
             type = RecordType.RECEIVED_INVITE,
             title = "测试",
+            groupId = null,
+            groupName = null,
+            role = null,
             status = RecordStatus.PENDING,
             rawStatus = "pending",
             createdAt = "2026-01-01 00:00:00",
@@ -135,6 +138,9 @@ class InviteApiUnitTest {
             id = "copy_test",
             type = RecordType.RECEIVED_INVITE,
             title = "原始标题",
+            groupId = null,
+            groupName = null,
+            role = null,
             status = RecordStatus.PENDING,
             rawStatus = "pending",
             createdAt = "2026-01-01 00:00:00"
@@ -149,14 +155,14 @@ class InviteApiUnitTest {
         InviteDataCache.clearAll()
 
         val receivedItems = listOf(
-            UnifiedRecordItem("r1", RecordType.RECEIVED_INVITE, "收到1", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 10:00:00"),
-            UnifiedRecordItem("r2", RecordType.RECEIVED_INVITE, "收到2", status = RecordStatus.ACCEPTED, rawStatus = "accepted", createdAt = "2026-05-10 10:00:00")
+            UnifiedRecordItem("r1", RecordType.RECEIVED_INVITE, "收到1", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 10:00:00"),
+            UnifiedRecordItem("r2", RecordType.RECEIVED_INVITE, "收到2", null, null, null, RecordStatus.ACCEPTED, "accepted", "2026-05-10 10:00:00")
         )
         val sentItems = listOf(
-            UnifiedRecordItem("s1", RecordType.SENT_INVITE, "发出1", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 12:00:00")
+            UnifiedRecordItem("s1", RecordType.SENT_INVITE, "发出1", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 12:00:00")
         )
         val joinItems = listOf(
-            UnifiedRecordItem("j1", RecordType.JOIN_REQUEST, "申请1", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 08:00:00")
+            UnifiedRecordItem("j1", RecordType.JOIN_REQUEST, "申请1", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 08:00:00")
         )
 
         InviteDataCache.setReceivedInvites(receivedItems, 2)
@@ -178,14 +184,14 @@ class InviteApiUnitTest {
         InviteDataCache.clearAll()
 
         InviteDataCache.setReceivedInvites(listOf(
-            UnifiedRecordItem("r_old", RecordType.RECEIVED_INVITE, "旧", status = RecordStatus.ACCEPTED, rawStatus = "accepted", createdAt = "2026-01-01 00:00:00"),
-            UnifiedRecordItem("r_new", RecordType.RECEIVED_INVITE, "新", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-12-31 23:59:59")
+            UnifiedRecordItem("r_old", RecordType.RECEIVED_INVITE, "旧", null, null, null, RecordStatus.ACCEPTED, "accepted", "2026-01-01 00:00:00"),
+            UnifiedRecordItem("r_new", RecordType.RECEIVED_INVITE, "新", null, null, null, RecordStatus.PENDING, "pending", "2026-12-31 23:59:59")
         ), 2)
         InviteDataCache.setSentInvites(listOf(
-            UnifiedRecordItem("s_mid", RecordType.SENT_INVITE, "中", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-06-15 10:00:00")
+            UnifiedRecordItem("s_mid", RecordType.SENT_INVITE, "中", null, null, null, RecordStatus.PENDING, "pending", "2026-06-15 10:00:00")
         ), 1)
         InviteDataCache.setJoinRequests(listOf(
-            UnifiedRecordItem("j_recent", RecordType.JOIN_REQUEST, "最近", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-11-20 15:00:00")
+            UnifiedRecordItem("j_recent", RecordType.JOIN_REQUEST, "最近", null, null, null, RecordStatus.PENDING, "pending", "2026-11-20 15:00:00")
         ), 1)
 
         val merged = InviteDataCache.getAllMerged()
@@ -203,15 +209,15 @@ class InviteApiUnitTest {
         InviteDataCache.clearAll()
 
         InviteDataCache.setReceivedInvites(listOf(
-            UnifiedRecordItem("p1", RecordType.RECEIVED_INVITE, "待处理1", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 10:00:00"),
-            UnifiedRecordItem("a1", RecordType.RECEIVED_INVITE, "已接受", status = RecordStatus.ACCEPTED, rawStatus = "accepted", createdAt = "2026-05-10 10:00:00")
+            UnifiedRecordItem("p1", RecordType.RECEIVED_INVITE, "待处理1", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 10:00:00"),
+            UnifiedRecordItem("a1", RecordType.RECEIVED_INVITE, "已接受", null, null, null, RecordStatus.ACCEPTED, "accepted", "2026-05-10 10:00:00")
         ), 2)
         InviteDataCache.setSentInvites(listOf(
-            UnifiedRecordItem("p2", RecordType.SENT_INVITE, "待处理2", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 12:00:00"),
-            UnifiedRecordItem("c1", RecordType.SENT_INVITE, "已撤销", status = RecordStatus.CANCELLED, rawStatus = "cancelled", createdAt = "2026-05-09 10:00:00")
+            UnifiedRecordItem("p2", RecordType.SENT_INVITE, "待处理2", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 12:00:00"),
+            UnifiedRecordItem("c1", RecordType.SENT_INVITE, "已撤销", null, null, null, RecordStatus.CANCELLED, "cancelled", "2026-05-09 10:00:00")
         ), 2)
         InviteDataCache.setJoinRequests(listOf(
-            UnifiedRecordItem("p3", RecordType.JOIN_REQUEST, "待审批", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 08:00:00")
+            UnifiedRecordItem("p3", RecordType.JOIN_REQUEST, "待审批", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 08:00:00")
         ), 1)
 
         val pending = InviteDataCache.getPendingRecords()
@@ -226,7 +232,7 @@ class InviteApiUnitTest {
         InviteDataCache.clearAll()
 
         InviteDataCache.setReceivedInvites(listOf(
-            UnifiedRecordItem("target", RecordType.RECEIVED_INVITE, "目标", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 10:00:00")
+            UnifiedRecordItem("target", RecordType.RECEIVED_INVITE, "目标", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 10:00:00")
         ), 1)
 
         val result = InviteDataCache.updateRecordStatus("target", RecordStatus.ACCEPTED)
@@ -248,7 +254,7 @@ class InviteApiUnitTest {
         assertTrue(InviteDataCache.isReceivedExpired())
 
         InviteDataCache.setReceivedInvites(listOf(
-            UnifiedRecordItem("fresh", RecordType.RECEIVED_INVITE, "新鲜", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-05-11 10:00:00")
+            UnifiedRecordItem("fresh", RecordType.RECEIVED_INVITE, "新鲜", null, null, null, RecordStatus.PENDING, "pending", "2026-05-11 10:00:00")
         ), 1)
         assertFalse(InviteDataCache.isReceivedExpired())
         assertTrue(InviteDataCache.isSentExpired())
@@ -288,11 +294,11 @@ class InviteApiUnitTest {
     @Test
     fun inviteData_threeTypesMixedSorting() {
         val records = listOf(
-            UnifiedRecordItem("a", RecordType.RECEIVED_INVITE, "A", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-03-01 00:00:00"),
-            UnifiedRecordItem("b", RecordType.SENT_INVITE, "B", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-06-15 12:00:00"),
-            UnifiedRecordItem("c", RecordType.JOIN_REQUEST, "C", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-01-01 00:00:00"),
-            UnifiedRecordItem("d", RecordType.RECEIVED_INVITE, "D", status = RecordStatus.ACCEPTED, rawStatus = "accepted", createdAt = "2026-12-31 23:59:59"),
-            UnifiedRecordItem("e", RecordType.SENT_INVITE, "E", status = RecordStatus.PENDING, rawStatus = "pending", createdAt = "2026-09-01 08:00:00")
+            UnifiedRecordItem("a", RecordType.RECEIVED_INVITE, "A", null, null, null, RecordStatus.PENDING, "pending", "2026-03-01 00:00:00"),
+            UnifiedRecordItem("b", RecordType.SENT_INVITE, "B", null, null, null, RecordStatus.PENDING, "pending", "2026-06-15 12:00:00"),
+            UnifiedRecordItem("c", RecordType.JOIN_REQUEST, "C", null, null, null, RecordStatus.PENDING, "pending", "2026-01-01 00:00:00"),
+            UnifiedRecordItem("d", RecordType.RECEIVED_INVITE, "D", null, null, null, RecordStatus.ACCEPTED, "accepted", "2026-12-31 23:59:59"),
+            UnifiedRecordItem("e", RecordType.SENT_INVITE, "E", null, null, null, RecordStatus.PENDING, "pending", "2026-09-01 08:00:00")
         )
 
         val sorted = records.sortedByDescending { it.createdAt }

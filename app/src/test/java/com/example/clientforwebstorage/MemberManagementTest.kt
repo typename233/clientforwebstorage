@@ -3,12 +3,7 @@ package com.example.clientforwebstorage
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
 class MemberManagementTest {
 
     private lateinit var testMembers: List<com.example.clientforwebstorage.network.models.MemberInfo>

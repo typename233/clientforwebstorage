@@ -14,6 +14,8 @@ class ConversationAdapter(
     private val onEditClick: (AiConversationItem) -> Unit
 ) : RecyclerView.Adapter<ConversationAdapter.ConversationViewHolder>() {
 
+    private var expandedPosition = RecyclerView.NO_POSITION
+
     inner class ConversationViewHolder(itemView: android.view.View) : RecyclerView.ViewHolder(itemView) {
         val tvTitle: TextView = itemView.findViewById(R.id.tv_conversation_title)
         val tvTime: TextView = itemView.findViewById(R.id.tv_conversation_time)
@@ -32,19 +34,26 @@ class ConversationAdapter(
         holder.tvTitle.text = item.title.ifEmpty { "未命名对话" }
         holder.tvTime.text = formatTimestamp(item.lastMessageAt)
 
-        holder.btnEdit.visibility = android.view.View.INVISIBLE
-        holder.btnDelete.visibility = android.view.View.INVISIBLE
+        val isExpanded = position == expandedPosition
+        holder.btnEdit.visibility = if (isExpanded) android.view.View.VISIBLE else android.view.View.INVISIBLE
+        holder.btnDelete.visibility = if (isExpanded) android.view.View.VISIBLE else android.view.View.INVISIBLE
 
         holder.itemView.setOnClickListener {
-            if (holder.btnEdit.visibility == android.view.View.VISIBLE) {
-                hideActionButtons(holder)
+            if (expandedPosition == holder.adapterPosition) {
+                hideExpandedButtons()
             } else {
                 onItemClick(item)
             }
         }
 
         holder.itemView.setOnLongClickListener {
-            showActionButtons(holder)
+            val oldPos = expandedPosition
+            expandedPosition = holder.adapterPosition
+            if (oldPos != RecyclerView.NO_POSITION && oldPos != expandedPosition) {
+                notifyItemChanged(oldPos)
+            }
+            holder.btnEdit.visibility = android.view.View.VISIBLE
+            holder.btnDelete.visibility = android.view.View.VISIBLE
             true
         }
 
@@ -64,14 +73,12 @@ class ConversationAdapter(
         notifyDataSetChanged()
     }
 
-    private fun showActionButtons(holder: ConversationViewHolder) {
-        holder.btnEdit.visibility = android.view.View.VISIBLE
-        holder.btnDelete.visibility = android.view.View.VISIBLE
-    }
-
-    private fun hideActionButtons(holder: ConversationViewHolder) {
-        holder.btnEdit.visibility = android.view.View.INVISIBLE
-        holder.btnDelete.visibility = android.view.View.INVISIBLE
+    fun hideExpandedButtons() {
+        val oldPos = expandedPosition
+        expandedPosition = RecyclerView.NO_POSITION
+        if (oldPos != RecyclerView.NO_POSITION) {
+            notifyItemChanged(oldPos)
+        }
     }
 
     private fun formatTimestamp(timestamp: String?): String {

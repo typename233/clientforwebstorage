@@ -50,6 +50,7 @@ class ChatFragment : Fragment() {
     private lateinit var recyclerMessages: RecyclerView
     private lateinit var etMessageInput: EditText
     private lateinit var btnSend: ImageButton
+    private lateinit var layoutChatInputContainer: LinearLayout
     private lateinit var messageAdapter: MessageAdapter
 
     private var conversationId: String? = null
@@ -100,6 +101,7 @@ class ChatFragment : Fragment() {
         setupToolbar()
         setupRecyclerView()
         setupInputArea()
+        setupKeyboardListener()
         loadMessages()
     }
 
@@ -108,6 +110,7 @@ class ChatFragment : Fragment() {
         recyclerMessages = view.findViewById(R.id.recycler_messages)
         etMessageInput = view.findViewById(R.id.et_message_input)
         btnSend = view.findViewById(R.id.btn_send)
+        layoutChatInputContainer = view.findViewById(R.id.layout_chat_input_container)
     }
 
     private fun setupToolbar() {
@@ -161,6 +164,32 @@ class ChatFragment : Fragment() {
                 etMessageInput.text?.clear()
             } else {
                 Toast.makeText(requireContext(), "请输入消息内容", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private var isKeyboardVisible = false
+
+    private fun setupKeyboardListener() {
+        view?.viewTreeObserver?.addOnGlobalLayoutListener {
+            val rect = android.graphics.Rect()
+            view?.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = view?.rootView?.height ?: 0
+            val keyboardHeight = screenHeight - rect.bottom
+
+            val wasKeyboardVisible = isKeyboardVisible
+            isKeyboardVisible = keyboardHeight > screenHeight * 0.15
+
+            if (isKeyboardVisible && !wasKeyboardVisible) {
+                layoutChatInputContainer.animate()
+                    .translationY((-keyboardHeight).toFloat())
+                    .setDuration(0)
+                    .start()
+            } else if (!isKeyboardVisible && wasKeyboardVisible) {
+                layoutChatInputContainer.animate()
+                    .translationY(0f)
+                    .setDuration(0)
+                    .start()
             }
         }
     }
