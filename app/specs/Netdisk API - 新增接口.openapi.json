@@ -1,0 +1,2313 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Netdisk API - 新增接口",
+    "description": "网盘系统新增接口文档",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "认证管理"
+    },
+    {
+      "name": "群组邀请"
+    },
+    {
+      "name": "会话管理"
+    },
+    {
+      "name": "成员管理"
+    },
+    {
+      "name": "免打扰"
+    },
+    {
+      "name": "消息管理"
+    },
+    {
+      "name": "未读数"
+    },
+    {
+      "name": "置顶消息"
+    },
+    {
+      "name": "WebSocket"
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/password": {
+      "post": {
+        "summary": "修改密码",
+        "deprecated": false,
+        "description": "当前用户修改登录密码，需要验证旧密码",
+        "operationId": "changePassword",
+        "tags": [
+          "认证管理"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "参数错误（旧密码或新密码长度不足8位）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "认证失败（旧密码错误）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/me/invites": {
+      "get": {
+        "summary": "获取当前用户的邀请列表",
+        "deprecated": false,
+        "description": "获取当前用户收到的待处理群组邀请列表（仅返回 pending 状态且未过期的邀请）",
+        "operationId": "listMyInvites",
+        "tags": [
+          "群组邀请"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码，默认1",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "每页条数，默认20",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/InviteListResponse"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations": {
+      "post": {
+        "summary": "创建会话",
+        "deprecated": false,
+        "description": "创建群聊或私聊会话",
+        "operationId": "createConversation",
+        "tags": [
+          "会话管理"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未认证",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "获取会话列表",
+        "deprecated": false,
+        "description": "获取当前用户的会话列表，支持分页和搜索",
+        "operationId": "listConversations",
+        "tags": [
+          "会话管理"
+        ],
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "搜索关键字（会话名称）",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "每页条数",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationListResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}": {
+      "get": {
+        "summary": "获取会话详情",
+        "deprecated": false,
+        "description": "获取指定会话的详细信息，包括成员列表",
+        "operationId": "getConversation",
+        "tags": [
+          "会话管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetailResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "更新会话",
+        "deprecated": false,
+        "description": "修改会话名称或头像",
+        "operationId": "updateConversation",
+        "tags": [
+          "会话管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConversationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetailResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/archive": {
+      "post": {
+        "summary": "归档会话",
+        "deprecated": false,
+        "description": "将会话移入归档列表",
+        "operationId": "archiveConversation",
+        "tags": [
+          "会话管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "归档成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/unarchive": {
+      "post": {
+        "summary": "取消归档",
+        "deprecated": false,
+        "description": "恢复已归档的会话",
+        "operationId": "unarchiveConversation",
+        "tags": [
+          "会话管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "恢复成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnarchiveResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/members": {
+      "get": {
+        "summary": "获取成员列表",
+        "deprecated": false,
+        "description": "获取会话的成员列表",
+        "operationId": "listMembers",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberListResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "添加成员",
+        "deprecated": false,
+        "description": "向群聊添加成员",
+        "operationId": "addMembers",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMembersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "添加成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddMembersResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/members/{userId}": {
+      "delete": {
+        "summary": "移除成员",
+        "deprecated": false,
+        "description": "从群聊中移除指定成员（仅群主/管理员可执行）",
+        "operationId": "removeMember",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "被移除的用户UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "移除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveMemberResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/leave": {
+      "post": {
+        "summary": "主动退群",
+        "deprecated": false,
+        "description": "成员主动退出群聊（群主无法退群，需先转让或解散）",
+        "operationId": "leaveConversation",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "退群成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "群主无法退群",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/dissolve": {
+      "post": {
+        "summary": "解散群聊",
+        "deprecated": false,
+        "description": "群主/管理员解散群聊",
+        "operationId": "dissolveConversation",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "解散成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DissolveResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "私聊无法解散",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "无权限",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/transfer": {
+      "post": {
+        "summary": "转让群主",
+        "deprecated": false,
+        "description": "群主将群主身份转让给其他成员",
+        "operationId": "transferOwnership",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOwnershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "转让成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOwnershipResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "无权限",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/admins": {
+      "post": {
+        "summary": "设置管理员",
+        "deprecated": false,
+        "description": "群主/管理员将成员设置为管理员",
+        "operationId": "setAdmin",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAdminRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "设置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetAdminResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/admins/{userId}": {
+      "delete": {
+        "summary": "取消管理员",
+        "deprecated": false,
+        "description": "群主/管理员取消成员的管理员身份",
+        "operationId": "removeAdmin",
+        "tags": [
+          "成员管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "被取消管理员的用户UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveAdminResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/mute": {
+      "post": {
+        "summary": "设置免打扰",
+        "deprecated": false,
+        "description": "设置会话免打扰",
+        "operationId": "muteConversation",
+        "tags": [
+          "免打扰"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MuteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuteResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/unmute": {
+      "post": {
+        "summary": "取消免打扰",
+        "deprecated": false,
+        "description": "取消会话免打扰",
+        "operationId": "unmuteConversation",
+        "tags": [
+          "免打扰"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnmuteResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/messages": {
+      "post": {
+        "summary": "发送消息",
+        "deprecated": false,
+        "description": "在会话中发送消息",
+        "operationId": "sendMessage",
+        "tags": [
+          "消息管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "发送成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "获取消息历史",
+        "deprecated": false,
+        "description": "获取会话的消息历史（游标分页）",
+        "operationId": "listMessages",
+        "tags": [
+          "消息管理"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "游标（上一页最后一条消息的ID）",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页条数（1-100）",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageListResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/messages/{messageId}": {
+      "patch": {
+        "summary": "编辑消息",
+        "deprecated": false,
+        "description": "修改消息内容",
+        "operationId": "editMessage",
+        "tags": [
+          "消息管理"
+        ],
+        "parameters": [
+          {
+            "name": "messageId",
+            "in": "path",
+            "description": "消息UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "编辑成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "撤回消息",
+        "deprecated": false,
+        "description": "撤回发送的消息（仅支持2分钟内的消息撤回）",
+        "operationId": "recallMessage",
+        "tags": [
+          "消息管理"
+        ],
+        "parameters": [
+          {
+            "name": "messageId",
+            "in": "path",
+            "description": "消息UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "撤回成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecallResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/messages/{messageId}/read": {
+      "post": {
+        "summary": "标记已读",
+        "deprecated": false,
+        "description": "将单条消息标记为已读",
+        "operationId": "markRead",
+        "tags": [
+          "消息管理"
+        ],
+        "parameters": [
+          {
+            "name": "messageId",
+            "in": "path",
+            "description": "消息UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "标记成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkReadResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/messages/read-batch": {
+      "post": {
+        "summary": "批量已读",
+        "deprecated": false,
+        "description": "异步批量标记消息为已读",
+        "operationId": "markReadBatch",
+        "tags": [
+          "消息管理"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "提交成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadBatchResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/unread": {
+      "get": {
+        "summary": "获取未读数",
+        "deprecated": false,
+        "description": "获取指定会话的未读消息数",
+        "operationId": "unreadCount",
+        "tags": [
+          "未读数"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/pins": {
+      "get": {
+        "summary": "获取置顶列表",
+        "deprecated": false,
+        "description": "获取会话的置顶消息列表",
+        "operationId": "listPins",
+        "tags": [
+          "置顶消息"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PinListResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "置顶消息",
+        "deprecated": false,
+        "description": "将消息置顶",
+        "operationId": "pinMessage",
+        "tags": [
+          "置顶消息"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "置顶成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PinResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/conversations/{conversationId}/pins/{messageId}": {
+      "delete": {
+        "summary": "取消置顶",
+        "deprecated": false,
+        "description": "取消消息置顶",
+        "operationId": "unpinMessage",
+        "tags": [
+          "置顶消息"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "description": "会话UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "description": "消息UUID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpinResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/chat/ws-token": {
+      "get": {
+        "summary": "获取WebSocket令牌",
+        "deprecated": false,
+        "description": "获取WebSocket连接所需的令牌",
+        "operationId": "wsToken",
+        "tags": [
+          "WebSocket"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WsTokenResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChangePasswordRequest": {
+        "type": "object",
+        "required": [
+          "oldPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "oldPassword": {
+            "type": "string",
+            "description": "旧密码（至少8位）",
+            "example": "12345678"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "新密码（至少8位）",
+            "example": "87654321"
+          }
+        }
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "type": "object",
+            "description": "响应数据",
+            "properties": {}
+          }
+        }
+      },
+      "InviteListResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "总数",
+            "example": 2
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InviteItem"
+            }
+          }
+        }
+      },
+      "CreateConversationRequest": {
+        "type": "object",
+        "required": [
+          "conversationType",
+          "memberUserIds"
+        ],
+        "properties": {
+          "conversationType": {
+            "type": "string",
+            "enum": [
+              "group",
+              "direct"
+            ],
+            "description": "会话类型（group=群聊，direct=私聊）",
+            "example": "group"
+          },
+          "spaceId": {
+            "type": "string",
+            "description": "关联空间ID（可选）",
+            "example": "space_xxx"
+          },
+          "name": {
+            "type": "string",
+            "description": "群聊名称（最大128字符）",
+            "example": "技术交流群"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "description": "群头像URL",
+            "example": "https://xxx.com/avatar.jpg"
+          },
+          "memberUserIds": {
+            "type": "array",
+            "description": "成员用户UUID列表（群聊上限500人，超出部分返回failedMembers）",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "user_uuid_1",
+              "user_uuid_2"
+            ]
+          }
+        }
+      },
+      "InviteItem": {
+        "type": "object",
+        "properties": {
+          "inviteId": {
+            "type": "string",
+            "description": "邀请ID",
+            "example": "inv_xxx"
+          },
+          "groupId": {
+            "type": "string",
+            "description": "群组ID",
+            "example": "g_xxx"
+          },
+          "groupName": {
+            "type": "string",
+            "description": "群组名称",
+            "example": "技术交流群"
+          },
+          "inviterUserId": {
+            "type": "string",
+            "description": "邀请人用户ID",
+            "example": "u_xxx"
+          },
+          "role": {
+            "type": "string",
+            "description": "角色（editor/member）",
+            "example": "editor"
+          },
+          "status": {
+            "type": "string",
+            "description": "状态（pending）",
+            "example": "pending"
+          },
+          "expiredAt": {
+            "type": "string",
+            "description": "过期时间",
+            "example": "2026-05-08 19:00:00"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间",
+            "example": "2026-05-05 19:00:00"
+          }
+        }
+      },
+      "UpdateConversationRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "会话名称",
+            "example": "新群名"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "description": "头像URL",
+            "example": "https://xxx.com/new_avatar.jpg"
+          }
+        }
+      },
+      "AddMembersRequest": {
+        "type": "object",
+        "required": [
+          "userIds"
+        ],
+        "properties": {
+          "userIds": {
+            "type": "array",
+            "description": "要添加的用户UUID列表",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "user_uuid_3",
+              "user_uuid_4"
+            ]
+          }
+        }
+      },
+      "TransferOwnershipRequest": {
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "目标用户UUID",
+            "example": "user_uuid_new_owner"
+          }
+        }
+      },
+      "SetAdminRequest": {
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "目标用户UUID",
+            "example": "user_uuid_admin"
+          }
+        }
+      },
+      "MuteRequest": {
+        "type": "object",
+        "properties": {
+          "muteUntil": {
+            "type": "string",
+            "description": "免打扰截止时间（可选，格式：yyyy-MM-dd HH:mm:ss）",
+            "example": "2026-12-31 23:59:59"
+          }
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "required": [
+          "messageType"
+        ],
+        "properties": {
+          "messageType": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "file",
+              "system"
+            ],
+            "description": "消息类型",
+            "example": "text"
+          },
+          "contentText": {
+            "type": "string",
+            "description": "文本内容",
+            "example": "你好"
+          },
+          "content": {
+            "type": "object",
+            "description": "扩展内容（JSON对象，如图片尺寸、文件元数据等）",
+            "properties": {},
+            "example": {
+              "width": 100,
+              "height": 100
+            }
+          },
+          "replyToMessageId": {
+            "type": "string",
+            "description": "回复的消息UUID",
+            "example": "msg_xxx"
+          },
+          "resourceId": {
+            "type": "integer",
+            "description": "关联的网盘资源ID",
+            "example": 123
+          },
+          "clientMessageId": {
+            "type": "string",
+            "description": "客户端消息ID（用于去重）",
+            "example": "client_msg_xxx"
+          }
+        }
+      },
+      "EditMessageRequest": {
+        "type": "object",
+        "required": [
+          "contentText"
+        ],
+        "properties": {
+          "contentText": {
+            "type": "string",
+            "description": "新的文本内容",
+            "example": "修改后的内容"
+          }
+        }
+      },
+      "ReadBatchRequest": {
+        "type": "object",
+        "required": [
+          "conversationId",
+          "messageIds"
+        ],
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "description": "会话UUID",
+            "example": "conv_xxx"
+          },
+          "messageIds": {
+            "type": "array",
+            "description": "消息UUID列表",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "msg_1",
+              "msg_2"
+            ]
+          }
+        }
+      },
+      "PinMessageRequest": {
+        "type": "object",
+        "required": [
+          "messageId"
+        ],
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "消息UUID",
+            "example": "msg_xxx"
+          }
+        }
+      },
+      "ConversationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "会话UUID"
+          },
+          "conversationType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "ownerUserId": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberInfo"
+            }
+          }
+        }
+      },
+      "ConversationListResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationSummary"
+            }
+          }
+        }
+      },
+      "ConversationDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversationType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "spaceId": {
+            "type": "integer"
+          },
+          "ownerUserId": {
+            "type": "string"
+          },
+          "isMuted": {
+            "type": "boolean"
+          },
+          "muteUntil": {
+            "type": "string"
+          },
+          "lastMessageAt": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberInfo"
+            }
+          }
+        }
+      },
+      "ConversationSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversationType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "lastMessageAt": {
+            "type": "string"
+          },
+          "isMuted": {
+            "type": "boolean"
+          },
+          "muteUntil": {
+            "type": "string"
+          },
+          "unreadCount": {
+            "type": "integer"
+          },
+          "lastMessage": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      "MemberInfo": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "joinedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "MemberListResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberInfo"
+            }
+          }
+        }
+      },
+      "ArchiveResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UnarchiveResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "unarchived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AddMembersResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "addedCount": {
+            "type": "integer"
+          },
+          "failedUsers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "添加失败的成员列表及原因"
+          }
+        }
+      },
+      "RemoveMemberResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "removedUserId": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LeaveResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "left": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DissolveResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "dissolved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TransferOwnershipResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "newOwnerUserId": {
+            "type": "string"
+          },
+          "transferred": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetAdminResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "set": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RemoveAdminResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MuteResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "isMuted": {
+            "type": "boolean"
+          },
+          "muteUntil": {
+            "type": "string"
+          }
+        }
+      },
+      "UnmuteResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "isMuted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "messageType": {
+            "type": "string"
+          },
+          "contentText": {
+            "type": "string"
+          },
+          "content": {
+            "type": "object",
+            "properties": {}
+          },
+          "status": {
+            "type": "string"
+          },
+          "clientMessageId": {
+            "type": "string"
+          },
+          "replyToMessageId": {
+            "type": "integer"
+          },
+          "resourceId": {
+            "type": "integer"
+          },
+          "editedAt": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "sender": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      "MessageListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageResponse"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "RecallResponse": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string"
+          },
+          "recalled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MarkReadResponse": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReadBatchResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "readCount": {
+            "type": "integer"
+          },
+          "async": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UnreadCountResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "unreadCount": {
+            "type": "integer"
+          }
+        }
+      },
+      "PinListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pinnedAt": {
+                  "type": "string"
+                },
+                "message": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "PinResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UnpinResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WsTokenResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "WebSocket连接令牌"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "过期时间（秒）"
+          }
+        }
+      }
+    },
+    "responses": {},
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}

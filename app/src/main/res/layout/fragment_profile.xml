@@ -76,7 +76,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="user@example.com"
+                            android:text=""
                             android:textColor="#666666" />
                     </LinearLayout>
                 </LinearLayout>
@@ -100,7 +100,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="剩余 84.8 GB"
+                        android:text=""
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -108,7 +108,7 @@
                         android:id="@+id/tv_storage_used"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="15.2 GB / 100 GB"
+                        android:text="加载中..."
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -329,8 +329,23 @@
                     android:textSize="17sp" />
 
                 <TextView
+                    android:id="@+id/tv_notification_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="20dp"
+                    android:gravity="center"
+                    android:minWidth="20dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:text="0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:background="@drawable/bg_notification_type_system"
+                    android:visibility="gone" />
+
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
                     android:text="›"
                     android:textColor="#888888"
                     android:textSize="24sp" />

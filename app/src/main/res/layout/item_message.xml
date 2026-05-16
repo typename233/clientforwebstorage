@@ -55,8 +55,8 @@
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
 
                 <LinearLayout
                     android:id="@+id/layout_bubble"
@@ -77,40 +77,47 @@
                         android:text="这是一条消息内容"
                         android:textSize="15sp"
                         android:textColor="#333333" />
-
-                    <TextView
-                        android:id="@+id/tv_message_time"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:gravity="end"
-                        android:text="14:30"
-                        android:textSize="11sp"
-                        android:textColor="#999999" />
                 </LinearLayout>
 
-                <ImageButton
-                    android:id="@+id/btn_retry_send"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginStart="6dp"
-                    android:background="@drawable/bg_retry_button"
-                    android:src="@android:drawable/ic_menu_revert"
-                    android:tint="#FFFFFF"
-                    android:scaleType="centerInside"
-                    android:padding="6dp"
-                    android:visibility="gone"
-                    android:contentDescription="重新发送"
-                    android:elevation="2dp" />
+                <TextView
+                    android:id="@+id/tv_message_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="2dp"
+                    android:text="14:30"
+                    android:textSize="10sp"
+                    android:textColor="#999999"
+                    android:visibility="gone" />
 
-                <ProgressBar
-                    android:id="@+id/progress_retry"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginStart="6dp"
-                    android:visibility="gone"
-                    android:indeterminateTint="@color/error_red" />
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <ImageButton
+                        android:id="@+id/btn_retry_send"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_retry_button"
+                        android:src="@android:drawable/ic_menu_revert"
+                        android:tint="#FFFFFF"
+                        android:scaleType="centerInside"
+                        android:padding="6dp"
+                        android:visibility="gone"
+                        android:contentDescription="重新发送"
+                        android:elevation="2dp" />
+
+                    <ProgressBar
+                        android:id="@+id/progress_retry"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:visibility="gone"
+                        android:indeterminateTint="@color/error_red" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

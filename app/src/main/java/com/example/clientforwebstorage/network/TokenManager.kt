@@ -21,6 +21,8 @@ object TokenManager {
     private const val KEY_REFRESH_TOKEN = "refresh_token"
     private const val KEY_NICKNAME = "nickname"
     private const val KEY_AVATAR_URL = "avatar_url"
+    private const val KEY_USER_ID = "user_id"
+    private const val KEY_EMAIL = "email"
     private const val REFRESH_INTERVAL_MS = 25 * 60 * 1000L
 
     private var prefs: SharedPreferences? = null
@@ -43,9 +45,10 @@ object TokenManager {
         }
     }
 
-    fun saveUserProfile(nickname: String?, avatarUrl: String?) {
+    fun saveUserProfile(nickname: String?, email: String?, avatarUrl: String?) {
         prefs?.edit()?.apply {
             if (nickname != null) putString(KEY_NICKNAME, nickname)
+            if (email != null) putString(KEY_EMAIL, email)
             if (avatarUrl != null) putString(KEY_AVATAR_URL, avatarUrl)
             apply()
         }
@@ -53,7 +56,15 @@ object TokenManager {
 
     fun getNickname(): String? = prefs?.getString(KEY_NICKNAME, null)
 
+    fun getEmail(): String? = prefs?.getString(KEY_EMAIL, null)
+
     fun getAvatarUrl(): String? = prefs?.getString(KEY_AVATAR_URL, null)
+
+    fun saveUserId(userId: String) {
+        prefs?.edit()?.putString(KEY_USER_ID, userId)?.apply()
+    }
+
+    fun getUserId(): String? = prefs?.getString(KEY_USER_ID, null)
 
     fun getAccessToken(): String? = prefs?.getString(KEY_ACCESS_TOKEN, null)
 

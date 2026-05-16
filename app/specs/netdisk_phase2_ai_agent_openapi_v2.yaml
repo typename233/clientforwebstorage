@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: NetDisk API (Phase 2 AI Agent + Chat Upgrade)
+  version: 2.2.0
+  description: |
+    网盘项目二期增量接口：
+    - AI 智能助手 (AI Agent)
+    - 聊天成员添加升级（支持邮箱/手机号邀请）
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: https://staging-api.example.com
+    description: Staging
+tags:
+  - name: AiAgent
+  - name: ChatMember
+security:
+  - bearerAuth: []
+paths:
+  # ==================== AI Agent 接口 ====================
+  /api/v2/ai/chat:
+    post:
+      tags: [AiAgent]
+      summary: AI 聊天
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiChatRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/v2/ai/conversations:
+    get:
+      tags: [AiAgent]
+      summary: AI 会话列表
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/v2/ai/conversations/{conversationId}:
+    get:
+      tags: [AiAgent]
+      summary: AI 会话详情
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [AiAgent]
+      summary: 删除 AI 会话
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/v2/ai/config:
+    get:
+      tags: [AiAgent]
+      summary: 获取 AI 配置
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    put:
+      tags: [AiAgent]
+      summary: 更新 AI 配置
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAgentConfigDTO'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ==================== 聊天接口升级 ====================
+  /api/v2/chat/conversations/{conversationId}/members:
+    post:
+      tags: [ChatMember]
+      summary: 添加会话成员（支持 userIds/emails/phones）
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMembersRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+        requestId:
+          type: string
+
+    # AI Chat 请求
+    AiChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          maxLength: 4000
+          description: 用户消息
+          example: 帮我搜索一下最近的文件
+        conversationId:
+          type: string
+          description: 会话ID，不传则创建新会话
+        useHistory:
+          type: boolean
+          default: true
+          description: 是否使用历史记录
+
+    # AI 配置 DTO
+    AiAgentConfigDTO:
+      type: object
+      properties:
+        modelName:
+          type: string
+          maxLength: 64
+          description: 模型名称
+          example: gpt-4o-mini
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 20
+          description: 温度参数
+          example: 0.7
+        maxTokens:
+          type: integer
+          minimum: 256
+          maximum: 8192
+          description: 最大Token数
+          example: 2048
+        systemPrompt:
+          type: string
+          maxLength: 4000
+          description: 系统提示词
+        enabled:
+          type: boolean
+          description: 是否启用
+
+    # 添加成员请求（升级版）
+    AddMembersRequest:
+      type: object
+      properties:
+        userIds:
+          type: array
+          items:
+            type: string
+          description: 用户UUID列表
+          example: ["uuid-1", "uuid-2"]
+        emails:
+          type: array
+          items:
+            type: string
+            format: email
+          description: 邮箱列表（通过邮箱查找用户）
+          example: ["user1@example.com", "user2@example.com"]
+        phones:
+          type: array
+          items:
+            type: string
+          description: 手机号列表（通过手机号查找用户）
+          example: ["13800138000", "13900139000"]

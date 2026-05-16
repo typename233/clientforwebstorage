@@ -4,13 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.example.clientforwebstorage.R
@@ -19,7 +16,6 @@ import com.example.clientforwebstorage.network.models.ApiResponse
 import com.example.clientforwebstorage.network.models.UserActivity
 import com.example.clientforwebstorage.network.models.UserActivityListData
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -41,19 +37,15 @@ class ActivitiesFragment : Fragment() {
     private lateinit var progressLoading: ProgressBar
     private lateinit var containerList: LinearLayout
 
-    private lateinit var spinnerPageSize: Spinner
-    private lateinit var btnPrevPage: MaterialButton
-    private lateinit var btnNextPage: MaterialButton
-    private lateinit var tvCurrentPage: TextView
-    private lateinit var tvTotalPages: TextView
+    private lateinit var btnPrevPage: TextView
+    private lateinit var btnNextPage: TextView
     private lateinit var tvPageInfo: TextView
-    private lateinit var paginationLayout: View
+    private lateinit var paginationLayout: LinearLayout
 
     private var currentPage = 1
-    private var pageSize = 5
+    private val pageSize = 5
     private var totalPages = 0
     private var totalRecords = 0
-    private val pageSizeOptions = arrayOf(5, 10, 20, 50, 100)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,11 +74,8 @@ class ActivitiesFragment : Fragment() {
         containerList = view.findViewById(R.id.container_activity_list)
 
         paginationLayout = view.findViewById(R.id.pagination_layout)
-        spinnerPageSize = view.findViewById(R.id.spinner_page_size)
         btnPrevPage = view.findViewById(R.id.btn_prev_page)
         btnNextPage = view.findViewById(R.id.btn_next_page)
-        tvCurrentPage = view.findViewById(R.id.tv_current_page)
-        tvTotalPages = view.findViewById(R.id.tv_total_pages)
         tvPageInfo = view.findViewById(R.id.tv_page_info)
     }
 
@@ -97,32 +86,6 @@ class ActivitiesFragment : Fragment() {
     }
 
     private fun setupPaginationControls() {
-        val adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_item,
-            pageSizeOptions.map { "$it 条/页" }
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerPageSize.adapter = adapter
-
-        val defaultSelection = pageSizeOptions.indexOfFirst { it == pageSize }
-        if (defaultSelection >= 0) {
-            spinnerPageSize.setSelection(defaultSelection)
-        }
-
-        spinnerPageSize.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val newPageSize = pageSizeOptions[position]
-                if (newPageSize != pageSize) {
-                    pageSize = newPageSize
-                    currentPage = 1
-                    loadActivitiesData(currentPage, pageSize)
-                }
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-
         btnPrevPage.setOnClickListener {
             if (currentPage > 1) {
                 currentPage--
@@ -139,24 +102,18 @@ class ActivitiesFragment : Fragment() {
     }
 
     private fun updatePaginationUI() {
-        tvCurrentPage.text = currentPage.toString()
-        tvTotalPages.text = if (totalPages == 0) "1" else totalPages.toString()
+        val displayTotalPages = if (totalPages == 0) 1 else totalPages
+        tvPageInfo.text = "第 $currentPage / $displayTotalPages 页"
 
         btnPrevPage.isEnabled = currentPage > 1
         btnNextPage.isEnabled = currentPage < totalPages
+        btnPrevPage.alpha = if (currentPage > 1) 1f else 0.4f
+        btnNextPage.alpha = if (currentPage < totalPages) 1f else 0.4f
 
-        if (totalRecords > 0) {
-            val startRecord = (currentPage - 1) * pageSize + 1
-            val endRecord = minOf(currentPage * pageSize, totalRecords)
-            tvPageInfo.text = "共 $totalRecords 条记录 · 显示第 $startRecord-$endRecord 条"
+        if (totalRecords > pageSize) {
+            paginationLayout.visibility = View.VISIBLE
         } else {
-            tvPageInfo.text = "共 0 条记录"
-        }
-
-        paginationLayout.visibility = if (totalRecords > 0 && totalPages > 1) {
-            View.VISIBLE
-        } else {
-            View.GONE
+            paginationLayout.visibility = View.GONE
         }
     }
 

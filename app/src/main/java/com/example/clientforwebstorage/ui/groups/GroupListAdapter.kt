@@ -43,7 +43,7 @@ class GroupListAdapter(
 
         fun bind(item: GroupItem) {
             name.text = item.name
-            
+
             if (item.isPinned) {
                 itemView.elevation = 8f
                 itemView.background = ContextCompat.getDrawable(
@@ -58,26 +58,32 @@ class GroupListAdapter(
                 )
             }
 
-            when (item.role) {
-                "owner" -> { 
-                    role.text = "所有者"; 
-                    role.setBackgroundResource(R.drawable.bg_role_owner) 
+            when (item.role.lowercase()) {
+                "owner" -> {
+                    role.text = "群主"
+                    role.visibility = View.VISIBLE
+                    role.setBackgroundResource(R.drawable.bg_role_owner)
+                    role.setTextColor(ContextCompat.getColor(itemView.context, R.color.role_owner_text))
                 }
-                "editor" -> { 
-                    role.text = "编辑者"; 
-                    role.setBackgroundResource(R.drawable.bg_role_editor) 
+                "admin", "editor" -> {
+                    role.text = "管理员"
+                    role.visibility = View.VISIBLE
+                    role.setBackgroundResource(R.drawable.bg_role_editor)
+                    role.setTextColor(ContextCompat.getColor(itemView.context, R.color.role_editor_text))
                 }
-                else -> { 
-                    role.text = "查看者"; 
-                    role.setBackgroundResource(R.drawable.bg_role_viewer) 
+                else -> {
+                    role.text = "普通成员"
+                    role.visibility = View.VISIBLE
+                    role.setBackgroundResource(R.drawable.bg_role_viewer)
+                    role.setTextColor(ContextCompat.getColor(itemView.context, R.color.role_viewer_text))
                 }
             }
-            
+
             val muteIndicator = if (item.isMuted) " · 🔇" else ""
             meta.text = "${item.memberCount} 成员 · ${item.storageUsed}$muteIndicator"
-            
+
             visibilityIcon.setImageResource(
-                if (item.visibility == "private") android.R.drawable.ic_lock_lock 
+                if (item.visibility == "private") android.R.drawable.ic_lock_lock
                 else android.R.drawable.presence_online
             )
             visibilityIcon.setColorFilter(ContextCompat.getColor(itemView.context, R.color.text_secondary))

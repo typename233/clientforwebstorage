@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity() {
 
     private var currentFilesFragment: FilesFragment? = null
     private var currentProfileFragment: ProfileFragment? = null
+    private var currentAgentFragment: AgentFragment? = null
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private lateinit var bottomNav: BottomNavigationView
 
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private fun showLogin() {
         val screen = com.example.clientforwebstorage.ui.LoginScreen(this,
             onSwitchToRegister = { showRegister() },
+            onSwitchToForgetPassword = { showForgetPassword() },
             onLoginSuccess = { showMain() }
         )
         setContentView(screen.createView())
@@ -64,6 +66,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun showRegister() {
         val screen = com.example.clientforwebstorage.ui.RegisterScreen(this) { showLogin() }
+        setContentView(screen.createView())
+    }
+
+    private fun showForgetPassword() {
+        val screen = com.example.clientforwebstorage.ui.ForgetPasswordScreen(this) { showLogin() }
         setContentView(screen.createView())
     }
 
@@ -75,15 +82,7 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_files -> switchFragment(currentFilesFragment!!)
                 R.id.nav_groups -> switchFragment(GroupsFragment())
-                R.id.nav_agent -> switchFragment(AgentFragment().apply {
-                    setNavigationCallbacks(
-                        onFiles = { bottomNav.selectedItemId = R.id.nav_files },
-                        onUpload = {
-                            bottomNav.selectedItemId = R.id.nav_files
-                            pickFilesLauncher.launch(arrayOf("*/*"))
-                        }
-                    )
-                })
+                R.id.nav_agent -> switchFragment(currentAgentFragment!!)
                 R.id.nav_profile -> switchFragment(currentProfileFragment!!)
             }
             true
@@ -94,6 +93,15 @@ class MainActivity : AppCompatActivity() {
         }
         currentProfileFragment = ProfileFragment().apply {
             setLogoutCallback { showLogin() }
+        }
+        currentAgentFragment = AgentFragment().apply {
+            setNavigationCallbacks(
+                onFiles = { bottomNav.selectedItemId = R.id.nav_files },
+                onUpload = {
+                    bottomNav.selectedItemId = R.id.nav_files
+                    pickFilesLauncher.launch(arrayOf("*/*"))
+                }
+            )
         }
 
         switchFragment(currentFilesFragment!!)
@@ -123,6 +131,18 @@ class MainActivity : AppCompatActivity() {
             currentFragment is com.example.clientforwebstorage.ui.groups.ChatFragment) {
             bottomNav.visibility = View.GONE
         } else {
+            bottomNav.visibility = View.VISIBLE
+        }
+    }
+
+    fun hideBottomNav() {
+        if (::bottomNav.isInitialized) {
+            bottomNav.visibility = View.GONE
+        }
+    }
+
+    fun showBottomNav() {
+        if (::bottomNav.isInitialized) {
             bottomNav.visibility = View.VISIBLE
         }
     }

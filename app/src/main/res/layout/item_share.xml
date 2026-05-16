@@ -6,7 +6,8 @@
     android:layout_marginBottom="10dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="2dp"
-    app:cardBackgroundColor="#FFFFFF">
+    app:cardBackgroundColor="#FFFFFF"
+    android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -37,14 +38,22 @@
                     android:ellipsize="end" />
 
                 <TextView
-                    android:id="@+id/tv_share_code"
+                    android:id="@+id/tv_share_link"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="分享码：ABC123"
                     android:textSize="12sp"
                     android:textColor="@color/primary_blue"
-                    android:fontFamily="monospace" />
+                    android:maxLines="2"
+                    android:ellipsize="middle"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <TextView

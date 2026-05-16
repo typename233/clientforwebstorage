@@ -25,65 +25,69 @@
         android:textSize="18sp"
         android:textStyle="bold" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="请输入要添加的成员邮箱地址"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="12dp"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/et_invitee_email"
+            android:id="@+id/et_email"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="请输入被邀请人邮箱或用户ID"
+            android:hint="邮箱地址"
             android:inputType="textEmailAddress"
             android:maxLines="1"
-            android:textSize="16sp" />
+            android:textSize="15sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="选择角色"
-        android:textColor="@color/text_secondary"
-        android:textSize="14sp" />
+        android:layout_marginTop="16dp"
+        android:text="成员角色"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp" />
 
     <RadioGroup
         android:id="@+id/rg_role"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal">
 
         <RadioButton
-            android:id="@+id/rb_editor"
+            android:id="@+id/rb_member"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:checked="true"
-            android:text="编辑者"
-            android:textSize="14sp" />
+            android:text="普通成员"
+            android:checked="true" />
 
         <RadioButton
-            android:id="@+id/rb_viewer"
+            android:id="@+id/rb_admin"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="查看者"
-            android:textSize="14sp" />
+            android:text="管理员" />
     </RadioGroup>
 
     <TextView
-        android:id="@+id/btn_confirm_invite"
+        android:id="@+id/tv_admin_hint"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="20dp"
-        android:background="@drawable/bg_button_primary"
-        android:gravity="center"
-        android:text="发送邀请"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="管理员可以管理群组成员、移除成员等"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
 </LinearLayout>

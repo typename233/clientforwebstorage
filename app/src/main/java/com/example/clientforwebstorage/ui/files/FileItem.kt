@@ -6,7 +6,8 @@ data class FileItem(
     val type: FileType,
     val size: Long = 0,
     val extension: String? = null,
-    val updatedAt: String
+    val updatedAt: String,
+    var isFavorite: Boolean = false
 )
 
 enum class FileType {

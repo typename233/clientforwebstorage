@@ -21,6 +21,17 @@ import com.example.clientforwebstorage.network.models.UpdateTagRequest
 import com.example.clientforwebstorage.network.models.UploadCompleteRequest
 import com.example.clientforwebstorage.network.models.UploadInitRequest
 import com.example.clientforwebstorage.network.models.VerificationRequest
+import com.example.clientforwebstorage.network.models.AddMembersRequest
+import com.example.clientforwebstorage.network.models.AiAgentConfigDTO
+import com.example.clientforwebstorage.network.models.AiChatRequest
+import com.example.clientforwebstorage.network.models.CreateConversationRequest
+import com.example.clientforwebstorage.network.models.EditMessageRequest
+import com.example.clientforwebstorage.network.models.MuteRequest
+import com.example.clientforwebstorage.network.models.PinMessageRequest
+import com.example.clientforwebstorage.network.models.ReadBatchRequest
+import com.example.clientforwebstorage.network.models.SetAdminRequest
+import com.example.clientforwebstorage.network.models.TransferOwnershipRequest
+import com.example.clientforwebstorage.network.models.UpdateConversationRequest
 import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.http.Body
@@ -46,6 +57,13 @@ interface ApiService {
     @POST("api/v1/auth/verification/send")
     fun sendVerificationCode(
         @Body request: VerificationRequest
+    ): Call<ApiResponse>
+
+    @POST("api/v1/auth/password/reset")
+    fun resetPassword(
+        @Query("email") email: String,
+        @Query("code") code: String,
+        @Query("newPassword") newPassword: String
     ): Call<ApiResponse>
 
     @GET("api/v1/resources")
@@ -403,4 +421,174 @@ interface ApiService {
         @Path("groupId") groupId: String,
         @Body request: com.example.clientforwebstorage.network.models.SendMessageRequest
     ): Call<ApiResponse>
+
+    // ==================== 新版会话管理 API (v2/chat/conversations) ====================
+    
+    // 会话管理
+    @POST("api/v2/chat/conversations")
+    fun createConversation(@Body request: CreateConversationRequest): Call<ApiResponse>
+
+    @GET("api/v2/chat/conversations")
+    fun listConversations(
+        @Query("keyword") keyword: String?,
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
+    @GET("api/v2/chat/conversations/{conversationId}")
+    fun getConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    @PATCH("api/v2/chat/conversations/{conversationId}")
+    fun updateConversation(
+        @Path("conversationId") conversationId: String,
+        @Body request: UpdateConversationRequest
+    ): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/archive")
+    fun archiveConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/unarchive")
+    fun unarchiveConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    // 成员管理
+    @GET("api/v2/chat/conversations/{conversationId}/members")
+    fun listMembers(
+        @Path("conversationId") conversationId: String,
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/members")
+    fun addMembers(
+        @Path("conversationId") conversationId: String,
+        @Body request: AddMembersRequest
+    ): Call<ApiResponse>
+
+    @DELETE("api/v2/chat/conversations/{conversationId}/members/{userId}")
+    fun removeConversationMember(
+        @Path("conversationId") conversationId: String,
+        @Path("userId") userId: String
+    ): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/leave")
+    fun leaveConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/dissolve")
+    fun dissolveConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/transfer")
+    fun transferOwnership(
+        @Path("conversationId") conversationId: String,
+        @Body request: TransferOwnershipRequest
+    ): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/admins")
+    fun setAdmin(
+        @Path("conversationId") conversationId: String,
+        @Body request: SetAdminRequest
+    ): Call<ApiResponse>
+
+    @DELETE("api/v2/chat/conversations/{conversationId}/admins/{userId}")
+    fun removeAdmin(
+        @Path("conversationId") conversationId: String,
+        @Path("userId") userId: String
+    ): Call<ApiResponse>
+
+    // 免打扰
+    @POST("api/v2/chat/conversations/{conversationId}/mute")
+    fun muteConversation(
+        @Path("conversationId") conversationId: String,
+        @Body request: MuteRequest
+    ): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/unmute")
+    fun unmuteConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    // 消息管理
+    @GET("api/v2/chat/conversations/{conversationId}/messages")
+    fun listMessages(
+        @Path("conversationId") conversationId: String,
+        @Query("cursor") cursor: String?,
+        @Query("limit") limit: Int?
+    ): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/messages")
+    fun sendMessage(
+        @Path("conversationId") conversationId: String,
+        @Body request: com.example.clientforwebstorage.network.models.SendMessageRequest
+    ): Call<ApiResponse>
+
+    @PATCH("api/v2/chat/messages/{messageId}")
+    fun editMessage(
+        @Path("messageId") messageId: String,
+        @Body request: EditMessageRequest
+    ): Call<ApiResponse>
+
+    @DELETE("api/v2/chat/messages/{messageId}")
+    fun recallMessage(@Path("messageId") messageId: String): Call<ApiResponse>
+
+    @POST("api/v2/chat/messages/{messageId}/read")
+    fun markMessageRead(@Path("messageId") messageId: String): Call<ApiResponse>
+
+    @POST("api/v2/chat/messages/read-batch")
+    fun markReadBatch(@Body request: ReadBatchRequest): Call<ApiResponse>
+
+    // 未读数
+    @GET("api/v2/chat/conversations/{conversationId}/unread")
+    fun getUnreadCount(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    // 置顶消息
+    @GET("api/v2/chat/conversations/{conversationId}/pins")
+    fun listPins(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    @POST("api/v2/chat/conversations/{conversationId}/pins")
+    fun pinMessage(
+        @Path("conversationId") conversationId: String,
+        @Body request: PinMessageRequest
+    ): Call<ApiResponse>
+
+    @DELETE("api/v2/chat/conversations/{conversationId}/pins/{messageId}")
+    fun unpinMessage(
+        @Path("conversationId") conversationId: String,
+        @Path("messageId") messageId: String
+    ): Call<ApiResponse>
+
+    // WebSocket
+    @GET("api/v2/chat/ws-token")
+    fun getWsToken(): Call<ApiResponse>
+
+    @GET("s/{shareCode}/download-url")
+    fun getShareDownloadUrl(
+        @Path("shareCode") shareCode: String,
+        @Query("resourceId") resourceId: String,
+        @Query("verifyToken") verifyToken: String? = null
+    ): Call<ApiResponse>
+
+    // ==================== AI Agent API ====================
+
+    @POST("api/v2/ai/chat")
+    fun aiChat(@Body request: AiChatRequest): Call<ApiResponse>
+
+    @GET("api/v2/ai/conversations")
+    fun getAiConversations(
+        @Query("page") page: Int?,
+        @Query("pageSize") pageSize: Int?
+    ): Call<ApiResponse>
+
+    @GET("api/v2/ai/conversations/{conversationId}")
+    fun getAiConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    @DELETE("api/v2/ai/conversations/{conversationId}")
+    fun deleteAiConversation(@Path("conversationId") conversationId: String): Call<ApiResponse>
+
+    @GET("api/v2/ai/config")
+    fun getAiConfig(): Call<ApiResponse>
+
+    @PUT("api/v2/ai/config")
+    fun updateAiConfig(@Body request: AiAgentConfigDTO): Call<ApiResponse>
+
+    // ==================== 存储空间 API ====================
+
+    @GET("api/v1/spaces/current/usage")
+    fun getSpaceUsage(): Call<ApiResponse>
 }

@@ -35,6 +35,7 @@ import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
 class LoginScreen(
     private val activity: Activity,
     private val onSwitchToRegister: () -> Unit,
+    private val onSwitchToForgetPassword: () -> Unit = {},
     private val onLoginSuccess: () -> Unit = {}
 ) {
 
@@ -45,7 +46,7 @@ class LoginScreen(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#F3F4F6"))
             id = View.generateViewId()
         }
 
@@ -64,7 +65,7 @@ class LoginScreen(
             id = View.generateViewId()
             text = "欢迎回来"
             textSize = 28f
-            setTextColor(Color.parseColor("#333333"))
+            setTextColor(Color.parseColor("#111827"))
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
         }
@@ -74,7 +75,7 @@ class LoginScreen(
             id = View.generateViewId()
             text = "登录您的账号以继续"
             textSize = 16f
-            setTextColor(Color.parseColor("#888888"))
+            setTextColor(Color.parseColor("#6B7280"))
             gravity = Gravity.CENTER
         }
 
@@ -114,6 +115,18 @@ class LoginScreen(
 
         cardInnerLayout.addView(emailInput)
         cardInnerLayout.addView(passwordInput)
+
+        // 忘记密码按钮（右对齐）
+        val forgetPasswordButton = TextView(activity).apply {
+            id = View.generateViewId()
+            text = "忘记密码？"
+            textSize = 14f
+            setTextColor(Color.parseColor("#1976D2"))
+            gravity = Gravity.END
+            setOnClickListener { onSwitchToForgetPassword() }
+        }
+        cardInnerLayout.addView(forgetPasswordButton)
+
         inputCard.addView(cardInnerLayout)
 
         // 登录按钮
@@ -123,7 +136,7 @@ class LoginScreen(
             textSize = 18f
             setTextColor(Color.WHITE)
             setAllCaps(false)
-            background = createRoundedBackground(Color.parseColor("#007AFF"), dpToPx(25).toFloat())
+            background = createRoundedBackground(Color.parseColor("#1976D2"), dpToPx(25).toFloat())
             layoutParams = ConstraintLayout.LayoutParams(
                 ConstraintLayout.LayoutParams.MATCH_PARENT,
                 dpToPx(50)
@@ -137,7 +150,7 @@ class LoginScreen(
             id = View.generateViewId()
             text = "还没有账号？"
             textSize = 14f
-            setTextColor(Color.parseColor("#666666"))
+            setTextColor(Color.parseColor("#6B7280"))
             gravity = Gravity.CENTER
         }
 
@@ -146,7 +159,7 @@ class LoginScreen(
             id = View.generateViewId()
             text = "立即注册"
             textSize = 14f
-            setTextColor(Color.parseColor("#007AFF"))
+            setTextColor(Color.parseColor("#1976D2"))
             setTypeface(null, android.graphics.Typeface.BOLD)
             setPadding(dpToPx(4), 0, 0, 0)
             setOnClickListener { onSwitchToRegister() }
@@ -228,7 +241,8 @@ class LoginScreen(
                                 val loginData = parseLoginData(apiResponse.data)
                                 if (loginData != null) {
                                     TokenManager.saveTokens(loginData.accessToken, loginData.refreshToken)
-                                    TokenManager.saveUserProfile(loginData.user?.nickname, loginData.user?.avatarUrl)
+                                    TokenManager.saveUserProfile(loginData.user?.nickname, email, loginData.user?.avatarUrl)
+                                    loginData.user?.id?.let { TokenManager.saveUserId(it) }
                                     Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
                                     onLoginSuccess()
                                 } else {
@@ -259,8 +273,8 @@ class LoginScreen(
             this.hint = hint
             this.inputType = inputType
             textSize = 16f
-            setTextColor(Color.parseColor("#333333"))
-            setHintTextColor(Color.parseColor("#AAAAAA"))
+            setTextColor(Color.parseColor("#111827"))
+            setHintTextColor(Color.parseColor("#9CA3AF"))
             setPadding(0, dpToPx(12), 0, dpToPx(12))
             background = createUnderlineBackground()
             layoutParams = LinearLayout.LayoutParams(
@@ -279,7 +293,7 @@ class LoginScreen(
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor(Color.TRANSPARENT)
-            setStroke(1, Color.parseColor("#E0E0E0"))
+            setStroke(1, Color.parseColor("#E5E7EB"))
         }
     }
 

@@ -2,12 +2,13 @@ package com.example.clientforwebstorage.network
 
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.atomic.AtomicInteger
 
 object RetrofitClient {
-    private const val BASE_URL = "http://115.29.173.36:8081/"
+    const val BASE_URL = "http://115.29.173.36:8081/"
 
     private val authInterceptor = Interceptor { chain ->
         val originalRequest = chain.request()
@@ -49,6 +50,9 @@ object RetrofitClient {
     val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(tokenRefreshInterceptor)
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        })
         .build()
 
     val api: ApiService by lazy {

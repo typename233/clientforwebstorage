@@ -106,11 +106,14 @@
                     android:paddingBottom="14dp">
 
                     <LinearLayout
+                        android:id="@+id/card_member_count"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="center"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:background="?attr/selectableItemBackground"
+                        android:padding="8dp">
 
                         <TextView
                             android:id="@+id/tv_member_count"

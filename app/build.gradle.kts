@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     testImplementation(libs.junit)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
@@ -94,6 +95,12 @@ dependencies {
     ////////////////
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // CircleImageView for avatar display
+    implementation("de.hdodenhof:circleimageview:3.1.0")
+
+    // Picasso for image loading
+    implementation("com.squareup.picasso:picasso:2.8")
 }
 // OpenAPI Generator 配置
 openApiGenerate {

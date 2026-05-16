@@ -60,11 +60,15 @@
         </com.google.android.material.appbar.MaterialToolbar>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_my_space"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_marginTop="14dp"
             android:layout_marginEnd="10dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
             app:cardBackgroundColor="@color/primary_blue"
             app:cardCornerRadius="4dp"
             app:cardElevation="0dp">
@@ -87,10 +91,11 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tv_space_usage"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="15.2 GB 已使用 · 100 GB 总容量"
+                    android:text="加载中..."
                     android:textColor="@android:color/white"
                     android:textSize="14sp" />
             </LinearLayout>

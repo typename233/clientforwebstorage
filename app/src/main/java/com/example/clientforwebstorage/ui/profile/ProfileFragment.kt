@@ -15,6 +15,7 @@ import com.example.clientforwebstorage.R
 import com.example.clientforwebstorage.network.RetrofitClient
 import com.example.clientforwebstorage.network.TokenManager
 import com.example.clientforwebstorage.network.models.ApiResponse
+import com.example.clientforwebstorage.network.models.NotificationListData
 import com.example.clientforwebstorage.network.models.PurgeRecycleRequest
 import com.example.clientforwebstorage.network.models.Resource
 import com.example.clientforwebstorage.network.models.ResourceListData
@@ -54,13 +55,15 @@ class ProfileFragment : Fragment() {
         val tvEmail = view.findViewById<TextView>(R.id.tv_email)
 
         tvNickname.text = TokenManager.getNickname() ?: "用户"
-        tvEmail.text = "user@example.com"
+        val email = TokenManager.getEmail()
+        tvEmail.text = if (!email.isNullOrEmpty()) email else "未设置邮箱"
 
         switchNotifications.setOnCheckedChangeListener { _, checked ->
             Toast.makeText(requireContext(), if (checked) "已开启通知" else "已关闭通知", Toast.LENGTH_SHORT).show()
         }
 
         itemLogout.setOnClickListener {
+            clearAiConversationLocalData()
             TokenManager.clearTokens()
             onLogout?.invoke()
         }
@@ -72,11 +75,14 @@ class ProfileFragment : Fragment() {
         view.findViewById<View>(R.id.item_favorites)?.setOnClickListener {
             navigateToFavorites()
         }
-        
+
         view.findViewById<View>(R.id.item_notifications)?.setOnClickListener {
             navigateToNotifications()
         }
-        
+
+        loadUnreadNotificationCount()
+        loadSpaceUsage()
+
         view.findViewById<View>(R.id.item_privacy)?.setOnClickListener {
             Toast.makeText(requireContext(), "隐私与安全", Toast.LENGTH_SHORT).show()
         }
@@ -227,6 +233,30 @@ class ProfileFragment : Fragment() {
             .replace(R.id.fragment_container, notificationsFragment)
             .addToBackStack("notifications")
             .commit()
+    }
+
+    private fun loadUnreadNotificationCount() {
+        RetrofitClient.api.getNotifications(1, 1, true)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return
+                    if (response.isSuccessful && response.body()?.code == 0) {
+                        val data = parseData<NotificationListData>(response.body()?.data)
+                        val unreadCount = data?.total ?: 0
+                        val badge = view?.findViewById<TextView>(R.id.tv_notification_badge)
+                        if (badge != null) {
+                            if (unreadCount > 0) {
+                                badge.text = if (unreadCount > 99) "99+" else unreadCount.toString()
+                                badge.visibility = View.VISIBLE
+                            } else {
+                                badge.visibility = View.GONE
+                            }
+                        }
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {}
+            })
     }
 
     private fun showRecycleBinDialog() {
@@ -447,5 +477,71 @@ class ProfileFragment : Fragment() {
         } catch (_: Exception) { null }
     }
 
+    private fun loadSpaceUsage() {
+        val tvStorageUsed = view?.findViewById<TextView>(R.id.tv_storage_used) ?: return
+        val tvStorageRemaining = view?.findViewById<TextView>(R.id.tv_storage_remaining) ?: return
+        val storageProgress = view?.findViewById<com.google.android.material.progressindicator.LinearProgressIndicator>(R.id.storage_progress) ?: return
+
+        tvStorageUsed.text = "加载中..."
+        tvStorageRemaining.text = ""
+
+        RetrofitClient.api.getSpaceUsage()
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
+                    if (response.isSuccessful && response.body()?.code == 0) {
+                        val data = response.body()?.data
+                        if (data is Map<*, *>) {
+                            val usedBytes = (data["usedBytes"] as? Number)?.toLong() ?: 0L
+                            val quotaBytes = (data["quotaBytes"] as? Number)?.toLong() ?: 0L
+                            val remainingBytes = quotaBytes - usedBytes
+
+                            val usagePercentage = if (quotaBytes > 0) {
+                                (usedBytes.toDouble() / quotaBytes.toDouble() * 100).toInt()
+                            } else 0
+
+                            tvStorageUsed.text = "${formatSize(usedBytes)} / ${formatSize(quotaBytes)}"
+                            tvStorageRemaining.text = "剩余 ${formatSize(remainingBytes)}"
+                            storageProgress.progress = usagePercentage
+                        }
+                    } else {
+                        tvStorageUsed.text = "获取失败"
+                        tvStorageRemaining.text = ""
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
+                    tvStorageUsed.text = "网络错误"
+                    tvStorageRemaining.text = ""
+                }
+            })
+    }
+
+    private fun formatSize(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "${bytes} B"
+            bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+            bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
+            else -> String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        }
+    }
+
     private fun dpToPx(dp: Int): Int = (dp * requireContext().resources.displayMetrics.density).toInt()
+
+    private fun clearAiConversationLocalData() {
+        try {
+            val context = requireContext()
+
+            val titlesPrefs = context.getSharedPreferences("conversation_titles", android.content.Context.MODE_PRIVATE)
+            titlesPrefs.edit().clear().apply()
+
+            val messagesPrefs = context.getSharedPreferences("conversation_messages", android.content.Context.MODE_PRIVATE)
+            messagesPrefs.edit().clear().apply()
+
+            android.util.Log.d("ProfileFragment", "已清除本地AI会话数据（包括标题缓存）")
+        } catch (e: Exception) {
+            android.util.Log.e("ProfileFragment", "清除AI会话数据失败: ${e.message}")
+        }
+    }
 }

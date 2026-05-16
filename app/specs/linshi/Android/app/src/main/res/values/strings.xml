@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">NetDisk</string>
-    <string name="file_icon">文件图标</string>
-    <string name="group_icon">群组图标</string>
-    <string name="visibility">可见性</string>
-    <string name="more">更多</string>
-    <string name="send">发送</string>
-</resources>

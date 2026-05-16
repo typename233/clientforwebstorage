@@ -12,8 +12,11 @@ import com.example.clientforwebstorage.R
 class FileListAdapter(
     private val items: List<FileItem>,
     private val onItemClick: (FileItem) -> Unit,
-    private val onItemLongClick: (FileItem) -> Boolean = { false }
+    private val onItemLongClick: (FileItem) -> Boolean = { false },
+    private val onFavoriteClick: (FileItem) -> Unit = {}
 ) : RecyclerView.Adapter<FileListAdapter.FileViewHolder>() {
+
+    val currentList: MutableList<FileItem> = items.toMutableList()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -32,6 +35,7 @@ class FileListAdapter(
         private val name: TextView = itemView.findViewById(R.id.tv_file_name)
         private val meta: TextView = itemView.findViewById(R.id.tv_file_meta)
         private val btnMore: View = itemView.findViewById(R.id.btn_more)
+        private val favoriteTag: TextView = itemView.findViewById(R.id.tv_favorite_tag)
 
         fun bind(item: FileItem) {
             name.text = item.name
@@ -50,6 +54,13 @@ class FileListAdapter(
             }
             icon.setImageResource(iconRes)
             icon.setColorFilter(ContextCompat.getColor(itemView.context, tintRes))
+
+            if (item.isFavorite) {
+                favoriteTag.visibility = View.VISIBLE
+                favoriteTag.alpha = 1.0f
+            } else {
+                favoriteTag.visibility = View.GONE
+            }
 
             itemView.setOnClickListener { onItemClick(item) }
             itemView.setOnLongClickListener { onItemLongClick(item) }

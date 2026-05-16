@@ -79,6 +79,8 @@ class FilesFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        FavoritesManager.init(requireContext())
+
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         recycler = view.findViewById(R.id.recycler_files)
         val fab = view.findViewById<FloatingActionButton>(R.id.fab_add)
@@ -94,7 +96,8 @@ class FilesFragment : Fragment() {
         recycler.layoutManager = LinearLayoutManager(requireContext())
         adapter = FileListAdapter(emptyList(),
             onItemClick = { item -> onFileItemClick(item) },
-            onItemLongClick = { item -> onFileItemLongClick(item) }
+            onItemLongClick = { item -> onFileItemLongClick(item) },
+            onFavoriteClick = { item -> toggleFavorite(item) }
         )
         recycler.adapter = adapter
 
@@ -315,9 +318,24 @@ class FilesFragment : Fragment() {
                 dialog.dismiss()
                 shareResource(item)
             }
+            
+            val layoutFavoriteRow = sheetView.findViewById<View>(R.id.layout_favorite_row)
+            val btnFavorite = sheetView.findViewById<View>(R.id.btn_favorite)
+            val ivFavoriteIcon = sheetView.findViewById<android.widget.ImageView>(R.id.iv_favorite_icon)
+            val tvFavoriteText = sheetView.findViewById<TextView>(R.id.tv_favorite_text)
+
+            layoutFavoriteRow.visibility = View.VISIBLE
+            updateFavoriteButtonUI(item.isFavorite, ivFavoriteIcon, tvFavoriteText)
+
+            btnFavorite.setOnClickListener {
+                dialog.dismiss()
+                toggleFavoriteWithAnimation(item)
+            }
         } else {
             sheetView.findViewById<View>(R.id.btn_download).visibility = View.GONE
             sheetView.findViewById<View>(R.id.btn_share).visibility = View.GONE
+            
+            sheetView.findViewById<View>(R.id.layout_favorite_row).visibility = View.GONE
         }
 
         dialog.setContentView(sheetView)
@@ -329,6 +347,24 @@ class FilesFragment : Fragment() {
             }
         }
         dialog.show()
+    }
+
+    private fun updateFavoriteButtonUI(
+        isFavorited: Boolean,
+        icon: android.widget.ImageView,
+        text: TextView
+    ) {
+        if (isFavorited) {
+            icon.setImageResource(android.R.drawable.btn_star_big_on)
+            icon.setColorFilter(android.graphics.Color.parseColor("#FFA000"))
+            text.text = "取消收藏"
+            text.setTextColor(android.graphics.Color.parseColor("#D32F2F"))
+        } else {
+            icon.setImageResource(android.R.drawable.btn_star_big_off)
+            icon.setColorFilter(android.graphics.Color.parseColor("#FFA000"))
+            text.text = "收藏"
+            text.setTextColor(android.graphics.Color.parseColor("#FFA000"))
+        }
     }
 
     private fun showRenameDialog(item: FileItem) {
@@ -398,24 +434,49 @@ class FilesFragment : Fragment() {
     }
 
     private fun downloadFile(item: FileItem) {
+        android.util.Log.d("DownloadDebug", "开始下载文件: ${item.name}, ID: ${item.id}")
+
         RetrofitClient.api.getDownloadUrl(item.id)
             .enqueue(object : Callback<ApiResponse> {
                 override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                     if (!isAdded) return@onResponse
+
+                    android.util.Log.d("DownloadDebug", "响应状态: ${response.isSuccessful}")
+                    android.util.Log.d("DownloadDebug", "响应code: ${response.body()?.code}")
+
                     if (response.isSuccessful && response.body()?.code == 0) {
-                        val url = parseStringFromData(response.body()?.data, "downloadUrl")
-                        if (url != null) {
-                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        val data = response.body()?.data
+
+                        val url = parseStringFromData(data, "url")
+                            ?: parseStringFromData(data, "downloadUrl")
+                            ?: parseStringFromData(data, "download_url")
+                            ?: parseStringFromData(data, "link")
+
+                        android.util.Log.d("DownloadDebug", "解析到的URL: $url")
+
+                        if (!url.isNullOrEmpty()) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                startActivity(intent)
+                                android.util.Log.d("DownloadDebug", "已启动浏览器打开下载链接")
+                                Toast.makeText(requireContext(), "正在下载: ${item.name}", Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                android.util.Log.e("DownloadDebug", "打开下载链接失败", e)
+                                Toast.makeText(requireContext(), "无法打开下载链接: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
                         } else {
+                            android.util.Log.e("DownloadDebug", "无法解析出URL字段, data=$data")
                             Toast.makeText(requireContext(), "获取下载链接失败", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Toast.makeText(requireContext(), "获取下载链接失败", Toast.LENGTH_SHORT).show()
+                        android.util.Log.e("DownloadDebug", "API返回错误: code=${response.body()?.code}, message=${response.body()?.message}")
+                        Toast.makeText(requireContext(), "获取下载链接失败: ${response.body()?.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
                 override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                     if (!isAdded) return@onFailure
-                    Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
+                    android.util.Log.e("DownloadDebug", "网络请求失败", t)
+                    Toast.makeText(requireContext(), "网络错误: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -504,6 +565,7 @@ class FilesFragment : Fragment() {
                         showShareResultDialog(
                             fileName = item.name,
                             shareCode = shareCode ?: "未知",
+                            resourceId = item.id,
                             hasCode = needCode,
                             userCode = code
                         )
@@ -518,7 +580,7 @@ class FilesFragment : Fragment() {
             })
     }
 
-    private fun showShareResultDialog(fileName: String, shareCode: String, hasCode: Boolean, userCode: String?) {
+    private fun showShareResultDialog(fileName: String, shareCode: String, resourceId: String, hasCode: Boolean, userCode: String?) {
         val message = StringBuilder()
         message.appendLine("文件：$fileName")
         message.appendLine()
@@ -532,12 +594,60 @@ class FilesFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("✅ 分享成功")
             .setMessage(message.toString())
-            .setPositiveButton("复制链接") { _, _ ->
-                val shareLink = "https://your-domain.com/s/$shareCode${if (hasCode && !userCode.isNullOrBlank()) "?code=$userCode" else ""}"
-                copyToClipboard(shareLink)
+            .setPositiveButton("复制下载链接") { _, _ ->
+                fetchAndCopyShareDownloadUrl(shareCode, resourceId)
             }
             .setNegativeButton("关闭", null)
             .show()
+    }
+
+    private fun fetchAndCopyShareDownloadUrl(shareCode: String, resourceId: String) {
+        Toast.makeText(requireContext(), "正在获取下载链接...", Toast.LENGTH_SHORT).show()
+
+        android.util.Log.d("ShareDebug", "请求分享下载链接: shareCode=$shareCode, resourceId=$resourceId")
+
+        RetrofitClient.api.getShareDownloadUrl(shareCode, resourceId, null)
+            .enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (!isAdded) return@onResponse
+
+                    android.util.Log.d("ShareDebug", "HTTP状态码: ${response.code()}")
+                    android.util.Log.d("ShareDebug", "响应体: ${response.body()}")
+
+                    if (response.isSuccessful && response.body()?.code == 0) {
+                        val data = response.body()?.data
+                        val downloadUrl = parseStringFromData(data, "url")
+
+                        if (!downloadUrl.isNullOrEmpty()) {
+                            copyToClipboard(downloadUrl)
+                            android.util.Log.d("ShareDebug", "成功获取下载URL: $downloadUrl")
+                        } else {
+                            android.util.Log.e("ShareDebug", "无法解析分享下载URL, data=$data")
+                            fallbackToSharePageLink(shareCode, null)
+                        }
+                    } else {
+                        val errorMsg = response.body()?.message ?: "HTTP ${response.code()}"
+                        android.util.Log.e("ShareDebug", "获取分享下载链接失败: HTTP=${response.code()}, code=${response.body()?.code}, msg=$errorMsg")
+
+                        fallbackToSharePageLink(shareCode, null)
+                    }
+                }
+
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    if (!isAdded) return@onFailure
+                    android.util.Log.e("ShareDebug", "网络请求失败", t)
+
+                    fallbackToSharePageLink(shareCode, null)
+                }
+            })
+    }
+
+    private fun fallbackToSharePageLink(shareCode: String, verifyToken: String? = null) {
+        var sharePageLink = "http://115.29.173.36:8081/s/$shareCode"
+        
+        copyToClipboard(sharePageLink)
+        Toast.makeText(requireContext(), "✅ 已复制分享页面链接（下载链接不可用时自动降级）", Toast.LENGTH_LONG).show()
+        android.util.Log.d("ShareDebug", "降级为分享页面链接: $sharePageLink")
     }
 
     private fun copyToClipboard(text: String) {
@@ -683,13 +793,15 @@ class FilesFragment : Fragment() {
             items.add(FileItem("..", ".. 返回上级", FileType.FOLDER, updatedAt = ""))
         }
         sorted.forEach { res ->
+            val isFav = FavoritesManager.isFavorite(res.id)
             items.add(FileItem(res.id, res.name,
                 if (res.type == "folder") FileType.FOLDER else FileType.FILE,
-                res.size, res.extension, res.updatedAt ?: ""))
+                res.size, res.extension, res.updatedAt ?: "", isFav))
         }
         adapter = FileListAdapter(items,
             onItemClick = { item -> onFileItemClick(item) },
-            onItemLongClick = { item -> onFileItemLongClick(item) }
+            onItemLongClick = { item -> onFileItemLongClick(item) },
+            onFavoriteClick = { item -> toggleFavorite(item) }
         )
         recycler.adapter = adapter
     }
@@ -758,6 +870,92 @@ class FilesFragment : Fragment() {
         if (item.id == "..") return false
         showItemActionSheet(item)
         return true
+    }
+
+    private fun toggleFavorite(item: FileItem) {
+        val newFavoriteState = !item.isFavorite
+
+        if (newFavoriteState) {
+            RetrofitClient.api.favoriteResource(item.id)
+                .enqueue(object : Callback<ApiResponse> {
+                    override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                        if (!isAdded) return@onResponse
+                        if (response.isSuccessful && response.body()?.code == 0) {
+                            FavoritesManager.addFavorite(item.id)
+                            item.isFavorite = true
+                            updateAdapterItemFavoriteStatus(item.id, true)
+                            showFavoriteAnimation(true)
+                            Toast.makeText(requireContext(), "已添加到收藏", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(requireContext(), "收藏失败", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                        if (!isAdded) return@onFailure
+                        Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
+                    }
+                })
+        } else {
+            RetrofitClient.api.unfavoriteResource(item.id)
+                .enqueue(object : Callback<ApiResponse> {
+                    override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                        if (!isAdded) return@onResponse
+                        if (response.isSuccessful && response.body()?.code == 0) {
+                            FavoritesManager.removeFavorite(item.id)
+                            item.isFavorite = false
+                            updateAdapterItemFavoriteStatus(item.id, false)
+                            showFavoriteAnimation(false)
+                            Toast.makeText(requireContext(), "已取消收藏", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(requireContext(), "取消收藏失败", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                        if (!isAdded) return@onFailure
+                        Toast.makeText(requireContext(), "网络错误", Toast.LENGTH_SHORT).show()
+                    }
+                })
+        }
+    }
+
+    private fun toggleFavoriteWithAnimation(item: FileItem) {
+        toggleFavorite(item)
+    }
+
+    private fun updateAdapterItemFavoriteStatus(resourceId: String, isFavorited: Boolean) {
+        val currentPosition = adapter.currentList.indexOfFirst { it.id == resourceId }
+        if (currentPosition >= 0) {
+            adapter.currentList[currentPosition].isFavorite = isFavorited
+            adapter.notifyItemChanged(currentPosition)
+        }
+    }
+
+    private fun showFavoriteAnimation(isFavorited: Boolean) {
+        view?.let { rootView ->
+            val overlayView = View(requireContext()).apply {
+                setBackgroundColor(if (isFavorited) 0x1AFFA000 else 0x1A999999)
+                alpha = 0f
+            }
+
+            val params = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+            )
+
+            (rootView as ViewGroup).addView(overlayView, params)
+
+            overlayView.animate()
+                .alpha(1.0f)
+                .setDuration(150)
+                .withEndAction {
+                    overlayView.animate()
+                        .alpha(0f)
+                        .setDuration(200)
+                        .withEndAction { (rootView as ViewGroup).removeView(overlayView) }
+                        .start()
+                }
+                .start()
+        }
     }
 
     fun handleBack(): Boolean {

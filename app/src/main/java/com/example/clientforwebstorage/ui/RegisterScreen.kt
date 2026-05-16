@@ -39,7 +39,7 @@ class RegisterScreen(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#F3F4F6"))
             id = View.generateViewId()
         }
 
@@ -58,7 +58,7 @@ class RegisterScreen(
             id = View.generateViewId()
             text = "创建账号"
             textSize = 28f
-            setTextColor(Color.parseColor("#333333"))
+            setTextColor(Color.parseColor("#111827"))
             setTypeface(null, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
         }
@@ -68,7 +68,7 @@ class RegisterScreen(
             id = View.generateViewId()
             text = "填写信息完成注册"
             textSize = 16f
-            setTextColor(Color.parseColor("#888888"))
+            setTextColor(Color.parseColor("#6B7280"))
             gravity = Gravity.CENTER
         }
 
@@ -125,8 +125,8 @@ class RegisterScreen(
             hint = "验证码"
             inputType = InputType.TYPE_CLASS_NUMBER
             textSize = 16f
-            setTextColor(Color.parseColor("#333333"))
-            setHintTextColor(Color.parseColor("#AAAAAA"))
+            setTextColor(Color.parseColor("#111827"))
+            setHintTextColor(Color.parseColor("#9CA3AF"))
             setPadding(0, dpToPx(12), 0, dpToPx(12))
             background = createUnderlineBackground()
             layoutParams = LinearLayout.LayoutParams(
@@ -144,7 +144,7 @@ class RegisterScreen(
             textSize = 14f
             setTextColor(Color.WHITE)
             setAllCaps(false)
-            background = createRoundedBackground(Color.parseColor("#007AFF"), dpToPx(20).toFloat())
+            background = createRoundedBackground(Color.parseColor("#1976D2"), dpToPx(20).toFloat())
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 dpToPx(44),
@@ -169,7 +169,7 @@ class RegisterScreen(
             textSize = 18f
             setTextColor(Color.WHITE)
             setAllCaps(false)
-            background = createRoundedBackground(Color.parseColor("#007AFF"), dpToPx(25).toFloat())
+            background = createRoundedBackground(Color.parseColor("#1976D2"), dpToPx(25).toFloat())
             layoutParams = LayoutParams(
                 LayoutParams.MATCH_PARENT,
                 dpToPx(50)
@@ -192,13 +192,13 @@ class RegisterScreen(
         val loginPrompt = TextView(activity).apply {
             text = "已有账号？"
             textSize = 14f
-            setTextColor(Color.parseColor("#666666"))
+            setTextColor(Color.parseColor("#6B7280"))
         }
 
         val loginButton = TextView(activity).apply {
             text = "去登录"
             textSize = 14f
-            setTextColor(Color.parseColor("#007AFF"))
+            setTextColor(Color.parseColor("#1976D2"))
             setTypeface(null, android.graphics.Typeface.BOLD)
             setPadding(dpToPx(4), 0, 0, 0)
             setOnClickListener { onSwitchToLogin() }
@@ -318,8 +318,8 @@ class RegisterScreen(
             this.hint = hint
             this.inputType = inputType
             textSize = 16f
-            setTextColor(Color.parseColor("#333333"))
-            setHintTextColor(Color.parseColor("#AAAAAA"))
+            setTextColor(Color.parseColor("#111827"))
+            setHintTextColor(Color.parseColor("#9CA3AF"))
             setPadding(0, dpToPx(12), 0, dpToPx(12))
             background = createUnderlineBackground()
             layoutParams = LinearLayout.LayoutParams(
@@ -338,7 +338,7 @@ class RegisterScreen(
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor(Color.TRANSPARENT)
-            setStroke(1, Color.parseColor("#E0E0E0"))
+            setStroke(1, Color.parseColor("#E5E7EB"))
         }
     }
 

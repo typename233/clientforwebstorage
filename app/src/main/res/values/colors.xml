@@ -21,6 +21,12 @@
     <color name="role_owner_bg">#FFF3E0</color>
     <color name="role_owner_text">#E65100</color>
 
+    <color name="role_admin_bg">#E3F2FD</color>
+    <color name="role_admin_text">#1976D2</color>
+
+    <color name="role_member_bg">#E8F5E9</color>
+    <color name="role_member_text">#4CAF50</color>
+
     <color name="role_editor_bg">#E0F7FA</color>
     <color name="role_editor_text">#00838F</color>
 
@@ -35,4 +41,17 @@
     <color name="error_red_dark">#D32F2F</color>
     <color name="message_failed_bg">#FFEBEE</color>
     <color name="message_failed_border">#FFCDD2</color>
+
+    <!-- 通知相关颜色 -->
+    <color name="notification_unread_dot">#F44336</color>
+    <color name="notification_type_system">#1976D2</color>
+    <color name="notification_type_share">#4CAF50</color>
+    <color name="notification_type_group">#FF9800</color>
+    <color name="notification_type_file">#9C27B0</color>
+    <color name="notification_icon_bg_system">#E3F2FD</color>
+    <color name="notification_icon_bg_share">#E8F5E9</color>
+    <color name="notification_icon_bg_group">#FFF3E0</color>
+    <color name="notification_icon_bg_file">#F3E5F5</color>
+
+    <color name="chat_bubble_sent">#DCF8C6</color>
 </resources>
